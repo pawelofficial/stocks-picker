@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+yfinance
+pandas
+pandas-ta
+matplotlib
+mplfinance
+jinja2
+python-multipart

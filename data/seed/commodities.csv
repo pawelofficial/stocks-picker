@@ -1,0 +1,10 @@
+sector_name,commodity_symbol,commodity_name
+Oil & Gas,CL=F,WTI Crude Oil
+Oil & Gas,NG=F,Natural Gas
+Copper & Mining,HG=F,Copper Futures
+Gold Mining,GC=F,Gold Futures
+Steel,HRC=F,Hot-Rolled Coil Steel
+Natural Gas,NG=F,Natural Gas
+Agriculture & Fertilizers,ZC=F,Corn Futures
+Agriculture & Fertilizers,ZW=F,Wheat Futures
+Lithium & Battery Metals,ALB,Albemarle (lithium proxy)

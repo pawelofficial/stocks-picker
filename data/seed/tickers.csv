@@ -1,0 +1,45 @@
+symbol,name,exchange,sector_name
+XOM,ExxonMobil,NYSE,Oil & Gas
+CVX,Chevron,NYSE,Oil & Gas
+COP,ConocoPhillips,NYSE,Oil & Gas
+OXY,Occidental Petroleum,NYSE,Oil & Gas
+EOG,EOG Resources,NYSE,Oil & Gas
+SLB,SLB (Schlumberger),NYSE,Oil & Gas
+HAL,Halliburton,NYSE,Oil & Gas
+DVN,Devon Energy,NYSE,Oil & Gas
+MPC,Marathon Petroleum,NYSE,Oil & Gas
+VLO,Valero Energy,NYSE,Oil & Gas
+PSX,Phillips 66,NYSE,Oil & Gas
+HES,Hess Corporation,NYSE,Oil & Gas
+FANG,Diamondback Energy,NASDAQ,Oil & Gas
+PXD,Pioneer Natural Resources,NYSE,Oil & Gas
+APA,APA Corporation,NASDAQ,Oil & Gas
+FCX,Freeport-McMoRan,NYSE,Copper & Mining
+SCCO,Southern Copper,NYSE,Copper & Mining
+TECK,Teck Resources,NYSE,Copper & Mining
+RIO,Rio Tinto,NYSE,Copper & Mining
+BHP,BHP Group,NYSE,Copper & Mining
+NEM,Newmont,NYSE,Gold Mining
+GOLD,Barrick Gold,NYSE,Gold Mining
+AEM,Agnico Eagle Mines,NYSE,Gold Mining
+WPM,Wheaton Precious Metals,NYSE,Gold Mining
+KGC,Kinross Gold,NYSE,Gold Mining
+FNV,Franco-Nevada,NYSE,Gold Mining
+NUE,Nucor,NYSE,Steel
+STLD,Steel Dynamics,NASDAQ,Steel
+X,United States Steel,NYSE,Steel
+CLF,Cleveland-Cliffs,NYSE,Steel
+LNG,Cheniere Energy,NYSE,Natural Gas
+AR,Antero Resources,NYSE,Natural Gas
+EQT,EQT Corporation,NYSE,Natural Gas
+RRC,Range Resources,NYSE,Natural Gas
+SWN,Southwestern Energy,NYSE,Natural Gas
+MOS,The Mosaic Company,NYSE,Agriculture & Fertilizers
+NTR,Nutrien,NYSE,Agriculture & Fertilizers
+CF,CF Industries,NYSE,Agriculture & Fertilizers
+FMC,FMC Corporation,NYSE,Agriculture & Fertilizers
+CTVA,Corteva,NYSE,Agriculture & Fertilizers
+ALB,Albemarle,NYSE,Lithium & Battery Metals
+SQM,Sociedad Quimica y Minera,NYSE,Lithium & Battery Metals
+LTHM,Livent,NYSE,Lithium & Battery Metals
+MP,MP Materials,NYSE,Lithium & Battery Metals
