@@ -1,0 +1,97 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.5;
+    padding: 1.5rem;
+}
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.container { max-width: 1280px; margin: 0 auto; }
+h1 { font-size: 1.6rem; margin-bottom: 1rem; color: #e6edf3; }
+h2 { font-size: 1.25rem; margin-bottom: .75rem; color: #e6edf3; }
+
+/* ── Navbar ───────────────────────────────────────────────────────────────── */
+.nav { display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; padding-bottom: .75rem; border-bottom: 1px solid #21262d; }
+.nav a { font-weight: 600; }
+.nav .brand { font-size: 1.1rem; color: #e6edf3; }
+
+/* ── Cards (dashboard) ────────────────────────────────────────────────────── */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+.card h3 { font-size: 1.1rem; color: #e6edf3; margin-bottom: .5rem; }
+.card .meta { font-size: .85rem; color: #8b949e; margin-bottom: 1rem; }
+.card .actions { display: flex; gap: .5rem; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn {
+    display: inline-block;
+    padding: .4rem .9rem;
+    border-radius: 6px;
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid #30363d;
+    transition: background .15s;
+}
+.btn-primary { background: #238636; color: #fff; border-color: #238636; }
+.btn-primary:hover { background: #2ea043; text-decoration: none; }
+.btn-secondary { background: #21262d; color: #c9d1d9; }
+.btn-secondary:hover { background: #30363d; text-decoration: none; }
+.btn-sm { padding: .25rem .6rem; font-size: .8rem; }
+
+/* ── Strategy selector ────────────────────────────────────────────────────── */
+.strategy-bar { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+.strategy-bar label { font-size: .85rem; color: #8b949e; margin-right: .25rem; }
+.strategy-bar .btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+
+/* ── Table ────────────────────────────────────────────────────────────────── */
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th, td { padding: .55rem .75rem; text-align: left; border-bottom: 1px solid #21262d; }
+th { color: #8b949e; font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; position: sticky; top: 0; background: #0d1117; }
+tr:hover { background: #161b22; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Score cell colouring */
+.score { font-weight: 600; }
+.score-high { color: #3fb950; }
+.score-mid  { color: #d29922; }
+.score-low  { color: #f85149; }
+
+/* ── Tabs (stock detail) ──────────────────────────────────────────────────── */
+.tabs { display: flex; gap: 0; margin-bottom: 1rem; border-bottom: 2px solid #21262d; }
+.tab {
+    padding: .5rem 1rem;
+    cursor: pointer;
+    font-size: .9rem;
+    color: #8b949e;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+}
+.tab:hover { color: #c9d1d9; }
+.tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Fundamentals panel ───────────────────────────────────────────────────── */
+.fund-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem; margin-top: 1rem; }
+.fund-item { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: .75rem; }
+.fund-item .label { font-size: .75rem; color: #8b949e; text-transform: uppercase; letter-spacing: .03em; }
+.fund-item .value { font-size: 1.1rem; font-weight: 600; color: #e6edf3; margin-top: .15rem; }
+
+/* ── Chart image ──────────────────────────────────────────────────────────── */
+.chart-img { width: 100%; border-radius: 6px; border: 1px solid #30363d; }
+
+/* ── Refresh button spinner ───────────────────────────────────────────────── */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #8b949e; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; margin-right: .3rem; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ ticker.symbol }} — {{ ticker.name }}{% endblock %}
+
+{% block content %}
+<h1>
+    {{ ticker.symbol }} — {{ ticker.name }}
+    {% if sector %}
+    <span style="font-size:.85rem; color:#8b949e; font-weight:normal;">
+        ({{ sector.name }})
+    </span>
+    {% endif %}
+</h1>
+
+<!-- Chart tabs -->
+<div class="tabs">
+    <div class="tab active" data-tf="D">Daily</div>
+    <div class="tab" data-tf="W">Weekly</div>
+    <div class="tab" data-tf="M">Monthly</div>
+</div>
+
+<div id="chart-D" class="tab-content active">
+    <img class="chart-img" src="/charts/{{ ticker.symbol }}?tf=D" alt="Daily chart">
+</div>
+<div id="chart-W" class="tab-content">
+    <img class="chart-img" src="/charts/{{ ticker.symbol }}?tf=W" alt="Weekly chart" loading="lazy">
+</div>
+<div id="chart-M" class="tab-content">
+    <img class="chart-img" src="/charts/{{ ticker.symbol }}?tf=M" alt="Monthly chart" loading="lazy">
+</div>
+
+<!-- Fundamentals -->
+<h2 style="margin-top:1.5rem;">Fundamentals</h2>
+{% if fund %}
+<div class="fund-grid">
+    <div class="fund-item">
+        <div class="label">P/E (TTM)</div>
+        <div class="value">{{ "%.1f"|format(fund.pe_ratio) if fund.pe_ratio else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Forward P/E</div>
+        <div class="value">{{ "%.1f"|format(fund.forward_pe) if fund.forward_pe else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Price / Book</div>
+        <div class="value">{{ "%.2f"|format(fund.price_to_book) if fund.price_to_book else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Debt / Equity</div>
+        <div class="value">{{ "%.2f"|format(fund.debt_to_equity) if fund.debt_to_equity else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Current Ratio</div>
+        <div class="value">{{ "%.2f"|format(fund.current_ratio) if fund.current_ratio else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Interest Coverage</div>
+        <div class="value">{{ "%.1f"|format(fund.interest_coverage) if fund.interest_coverage else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">ROE</div>
+        <div class="value">{{ "%.1f%%"|format(fund.roe * 100) if fund.roe else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Market Cap</div>
+        <div class="value">{{ fmt_large(fund.market_cap) if fund.market_cap else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Revenue (TTM)</div>
+        <div class="value">{{ fmt_large(fund.revenue_ttm) if fund.revenue_ttm else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Net Income (TTM)</div>
+        <div class="value">{{ fmt_large(fund.net_income_ttm) if fund.net_income_ttm else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Total Debt</div>
+        <div class="value">{{ fmt_large(fund.total_debt) if fund.total_debt else "—" }}</div>
+    </div>
+    <div class="fund-item">
+        <div class="label">Cash</div>
+        <div class="value">{{ fmt_large(fund.cash) if fund.cash else "—" }}</div>
+    </div>
+</div>
+{% else %}
+<p style="color:#8b949e;">No fundamental data yet. Refresh this ticker first.</p>
+{% endif %}
+
+<div style="margin-top:1.5rem;">
+    <button class="btn btn-secondary" onclick="refreshTicker()">
+        Refresh {{ ticker.symbol }}
+    </button>
+    {% if sector %}
+    <a href="/sectors/{{ sector.id }}/screen" class="btn btn-secondary" style="margin-left:.5rem;">
+        Back to {{ sector.name }} screener
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('chart-' + tab.dataset.tf).classList.add('active');
+    });
+});
+
+function refreshTicker() {
+    fetch('/api/refresh/symbol/{{ ticker.symbol }}', {method: 'POST'})
+        .then(r => r.json())
+        .then(() => { alert('Refresh started for {{ ticker.symbol }}. Reload in a minute.'); })
+        .catch(() => { alert('Refresh failed.'); });
+}
+</script>
+{% endblock %}

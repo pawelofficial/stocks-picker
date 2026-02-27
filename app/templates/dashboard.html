@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Stock Picker — Sectors{% endblock %}
+
+{% block content %}
+<h1>Sectors</h1>
+<div class="grid">
+    {% for s in sectors %}
+    <div class="card">
+        <h3>{{ s.name }}</h3>
+        <p class="meta">
+            {{ s.ticker_count }} ticker{{ "s" if s.ticker_count != 1 else "" }}
+            &middot;
+            {{ s.commodity_count }} commodit{{ "ies" if s.commodity_count != 1 else "y" }}
+        </p>
+        <div class="actions">
+            <a href="/sectors/{{ s.id }}/screen" class="btn btn-primary">Screen</a>
+            <button class="btn btn-secondary" onclick="refreshSector({{ s.id }}, this)">Refresh Data</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshSector(sectorId, btn) {
+    btn.innerHTML = '<span class="spinner"></span>Refreshing…';
+    btn.disabled = true;
+    fetch('/api/refresh/sector/' + sectorId, {method: 'POST'})
+        .then(r => r.json())
+        .then(d => { btn.textContent = 'Started: ' + d.sector; })
+        .catch(() => { btn.textContent = 'Error'; })
+        .finally(() => { setTimeout(() => { btn.textContent = 'Refresh Data'; btn.disabled = false; }, 5000); });
+}
+</script>
+{% endblock %}
