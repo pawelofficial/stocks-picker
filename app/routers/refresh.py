@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db, SessionLocal
@@ -46,7 +46,7 @@ def trigger_sector_refresh(
 ):
     sector = db.query(Sector).get(sector_id)
     if not sector:
-        return {"error": "Sector not found"}
+        raise HTTPException(status_code=404, detail="Sector not found")
     background_tasks.add_task(_bg_refresh_sector, sector_id)
     return {"status": "started", "sector": sector.name}
 

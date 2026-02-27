@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, Float, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Index, Integer, Text, Float, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -65,6 +65,8 @@ class PriceHistory(Base):
 
     __table_args__ = (
         UniqueConstraint("symbol", "date", "timeframe"),
+        # Hot query: WHERE symbol=? AND timeframe=? ORDER BY date
+        Index("ix_price_sym_tf_date", "symbol", "timeframe", "date"),
     )
 
 
@@ -75,7 +77,7 @@ class Fundamental(Base):
     __tablename__ = "fundamentals"
 
     id = Column(Integer, primary_key=True)
-    symbol = Column(Text, nullable=False)
+    symbol = Column(Text, nullable=False, index=True)
     report_date = Column(Text, nullable=False)
     pe_ratio = Column(Float)
     forward_pe = Column(Float)
@@ -116,6 +118,7 @@ class TechnicalIndicator(Base):
 
     __table_args__ = (
         UniqueConstraint("symbol", "date", "timeframe"),
+        Index("ix_ind_sym_tf_date", "symbol", "timeframe", "date"),
     )
 
 

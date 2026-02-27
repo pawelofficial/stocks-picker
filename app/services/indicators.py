@@ -39,8 +39,12 @@ def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     # Wilder's exponential moving average (equivalent to EMA with alpha=1/period)
     avg_gain = gain.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
-    rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
+    # Guard against division by zero: when avg_loss is 0, RSI = 100
+    rs = avg_gain / avg_loss.replace(0, float("nan"))
+    result = 100 - (100 / (1 + rs))
+    # Where avg_loss was 0 (all gains), RSI should be 100
+    result = result.fillna(100.0).where(avg_gain.notna(), other=float("nan"))
+    return result
 
 
 def sma(series: pd.Series, period: int) -> pd.Series:
@@ -59,7 +63,9 @@ def bollinger_bands(
     lower = middle - num_std * std
     width = upper - lower
     # %B: 0 at lower band, 1 at upper band, <0 below, >1 above
-    pct_b = (series - lower) / width.replace(0, float("nan"))
+    # When width is 0 (no volatility), %B defaults to 0.5 (mid-band)
+    pct_b = (series - lower) / width.where(width != 0, float("nan"))
+    pct_b = pct_b.fillna(0.5)
     return upper, middle, lower, pct_b
 
 

@@ -11,22 +11,44 @@
     {% endif %}
 </h1>
 
-<!-- Chart tabs -->
-<div class="tabs">
-    <div class="tab active" data-tf="D">Daily</div>
-    <div class="tab" data-tf="W">Weekly</div>
-    <div class="tab" data-tf="M">Monthly</div>
+<!-- Stock chart tabs -->
+<div class="tabs" id="stock-tabs">
+    <div class="tab active" data-target="stock-chart-D">Daily</div>
+    <div class="tab" data-target="stock-chart-W">Weekly</div>
+    <div class="tab" data-target="stock-chart-M">Monthly</div>
 </div>
 
-<div id="chart-D" class="tab-content active">
+<div id="stock-chart-D" class="tab-content active">
     <img class="chart-img" src="/charts/{{ ticker.symbol }}?tf=D" alt="Daily chart">
 </div>
-<div id="chart-W" class="tab-content">
+<div id="stock-chart-W" class="tab-content">
     <img class="chart-img" src="/charts/{{ ticker.symbol }}?tf=W" alt="Weekly chart" loading="lazy">
 </div>
-<div id="chart-M" class="tab-content">
+<div id="stock-chart-M" class="tab-content">
     <img class="chart-img" src="/charts/{{ ticker.symbol }}?tf=M" alt="Monthly chart" loading="lazy">
 </div>
+
+<!-- Commodity charts -->
+{% if commodities %}
+<h2 style="margin-top:1.5rem;">Underlying Commodities</h2>
+{% for c in commodities %}
+<h3 style="margin-top:1rem; font-size:.95rem; color:#8b949e;">{{ c.commodity_name }} ({{ c.commodity_symbol }})</h3>
+<div class="tabs" id="comm-tabs-{{ loop.index }}">
+    <div class="tab active" data-target="comm-{{ loop.index }}-D">Daily</div>
+    <div class="tab" data-target="comm-{{ loop.index }}-W">Weekly</div>
+    <div class="tab" data-target="comm-{{ loop.index }}-M">Monthly</div>
+</div>
+<div id="comm-{{ loop.index }}-D" class="tab-content active">
+    <img class="chart-img" src="/charts/{{ c.commodity_symbol }}?tf=D" alt="{{ c.commodity_name }} daily" loading="lazy">
+</div>
+<div id="comm-{{ loop.index }}-W" class="tab-content">
+    <img class="chart-img" src="/charts/{{ c.commodity_symbol }}?tf=W" alt="{{ c.commodity_name }} weekly" loading="lazy">
+</div>
+<div id="comm-{{ loop.index }}-M" class="tab-content">
+    <img class="chart-img" src="/charts/{{ c.commodity_symbol }}?tf=M" alt="{{ c.commodity_name }} monthly" loading="lazy">
+</div>
+{% endfor %}
+{% endif %}
 
 <!-- Fundamentals -->
 <h2 style="margin-top:1.5rem;">Fundamentals</h2>
@@ -99,13 +121,23 @@
 
 {% block scripts %}
 <script>
-// Tab switching
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById('chart-' + tab.dataset.tf).classList.add('active');
+// Generic tab switching — works for stock charts and each commodity section
+document.querySelectorAll('.tabs').forEach(tabGroup => {
+    tabGroup.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Deactivate siblings
+            tabGroup.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            // Find corresponding content panels (next siblings of this .tabs)
+            let el = tabGroup.nextElementSibling;
+            while (el && !el.classList.contains('tabs') && !el.tagName.match(/^H[1-3]$/)) {
+                if (el.classList.contains('tab-content')) el.classList.remove('active');
+                el = el.nextElementSibling;
+            }
+            // Activate clicked tab + its panel
+            tab.classList.add('active');
+            const target = document.getElementById(tab.dataset.target);
+            if (target) target.classList.add('active');
+        });
     });
 });
 

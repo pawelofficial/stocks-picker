@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Fundamental, Sector, Ticker
+from app.models import Fundamental, Sector, SectorCommodity, Ticker
 from app.schemas import CustomStrategyIn
 from app.services.scorer import (
     STRATEGIES,
@@ -54,9 +54,13 @@ def screener_api(
     strategy: str = "overall",
     db: Session = Depends(get_db),
 ):
+    sector = db.query(Sector).get(sector_id)
+    if not sector:
+        raise HTTPException(status_code=404, detail="Sector not found")
+
     strat = STRATEGIES.get(strategy)
     if strat is None:
-        return {"error": f"Unknown strategy: {strategy}"}
+        raise HTTPException(status_code=400, detail=f"Unknown strategy: {strategy}")
 
     scorer = Scorer(db)
     results = scorer.screen_sector(sector_id, strat)
@@ -83,6 +87,10 @@ def screener_custom_api(
     body: CustomStrategyIn,
     db: Session = Depends(get_db),
 ):
+    sector = db.query(Sector).get(sector_id)
+    if not sector:
+        raise HTTPException(status_code=404, detail="Sector not found")
+
     strat = ScoringStrategy.custom(body.name, body.weights)
     scorer = Scorer(db)
     results = scorer.screen_sector(sector_id, strat)
@@ -124,6 +132,15 @@ def stock_detail(
 
     sector = db.query(Sector).get(ticker.sector_id) if ticker.sector_id else None
 
+    # Commodity symbols for this sector (for commodity chart tabs)
+    commodities = []
+    if sector:
+        commodities = (
+            db.query(SectorCommodity)
+            .filter_by(sector_id=sector.id)
+            .all()
+        )
+
     return request.app.state.templates.TemplateResponse(
         "stock_detail.html",
         {
@@ -131,6 +148,7 @@ def stock_detail(
             "ticker": ticker,
             "fund": fund,
             "sector": sector,
+            "commodities": commodities,
         },
     )
 

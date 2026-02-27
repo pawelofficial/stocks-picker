@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from statistics import median
 from typing import Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -56,6 +56,7 @@ class ScoringStrategy:
     Missing components default to 0.
     """
 
+    key: str
     name: str
     description: str
     weights: dict[str, float]
@@ -78,6 +79,7 @@ class ScoringStrategy:
     def custom(name: str, weights: dict[str, float]) -> ScoringStrategy:
         """Factory for ad-hoc strategies from user-supplied weights."""
         return ScoringStrategy(
+            key="custom",
             name=name,
             description="Custom strategy",
             weights=weights,
@@ -88,26 +90,31 @@ class ScoringStrategy:
 
 STRATEGIES: dict[str, ScoringStrategy] = {
     "overall": ScoringStrategy(
+        key="overall",
         name="Overall",
         description="Balanced composite of all five factors",
         weights={"price": 0.25, "bb": 0.25, "commodity": 0.20, "pe": 0.15, "balance": 0.15},
     ),
     "bollinger": ScoringStrategy(
+        key="bollinger",
         name="Bollinger Bands",
         description="Rank purely by Bollinger Band depression",
         weights={"bb": 1.0},
     ),
     "value": ScoringStrategy(
+        key="value",
         name="Value",
         description="P/E and balance sheet health 50 / 50",
         weights={"pe": 0.5, "balance": 0.5},
     ),
     "deep_value": ScoringStrategy(
+        key="deep_value",
         name="Deep Value",
         description="Historical cheapness combined with solid fundamentals",
         weights={"price": 0.4, "pe": 0.3, "balance": 0.3},
     ),
     "commodity_play": ScoringStrategy(
+        key="commodity_play",
         name="Commodity Play",
         description="Cheap underlying commodity paired with depressed stock",
         weights={"commodity": 0.4, "price": 0.3, "bb": 0.3},
@@ -124,12 +131,12 @@ def list_strategies() -> list[dict]:
     """Return serialisable list of all built-in strategies."""
     return [
         {
-            "key": k,
+            "key": s.key,
             "name": s.name,
             "description": s.description,
             "weights": s.weights,
         }
-        for k, s in STRATEGIES.items()
+        for s in STRATEGIES.values()
     ]
 
 
@@ -177,6 +184,9 @@ def compute_pe_score(
     """0–100.  High = P/E is low relative to own history."""
     if current_pe is None or not historical_pes:
         return 50.0
+    # Negative PE means company is unprofitable — penalise, don't reward
+    if current_pe <= 0:
+        return 0.0
     med = median(historical_pes)
     if med <= 0:
         return 50.0
@@ -313,13 +323,10 @@ class Scorer:
         """Score a single ticker under the given strategy."""
         active = strategy.active_components()
 
-        closes = self._daily_closes(ticker.symbol) if ("price" in active) else []
+        # Always load closes — needed for display (current_price) even if
+        # "price" component has zero weight.
+        closes = self._daily_closes(ticker.symbol)
         current_price = closes[-1] if closes else None
-
-        # If price wasn't loaded for scoring but we still want to display it
-        if current_price is None:
-            all_closes = self._daily_closes(ticker.symbol)
-            current_price = all_closes[-1] if all_closes else None
 
         price_sc = compute_price_score(closes, current_price) if ("price" in active) else 50.0
 
@@ -364,7 +371,7 @@ class Scorer:
             pe_score=pe_sc,
             balance_score=balance_sc,
             composite_score=composite,
-            strategy_key=strategy.name,
+            strategy_key=strategy.key,
         )
 
     def screen_sector(
@@ -396,7 +403,7 @@ class Scorer:
             self.session.merge(
                 ScreeningScore(
                     symbol=r.symbol,
-                    strategy=strategy.name,
+                    strategy=strategy.key,
                     computed_at=now,
                     price_score=r.price_score,
                     bb_score=r.bb_score,

@@ -199,9 +199,13 @@ def build_chart(
     if sma_labels:
         ax_main.legend(sma_labels, loc="upper left", fontsize=8, framealpha=0.7)
 
-    # RSI reference lines
-    if len(axes) > 2:
-        ax_rsi = axes[2]  # mplfinance: panel 1 axes
+    # RSI reference lines — find the RSI axis by ylabel
+    ax_rsi = None
+    for ax in axes:
+        if ax.get_ylabel() == "RSI":
+            ax_rsi = ax
+            break
+    if ax_rsi is not None:
         ax_rsi.axhline(70, color="red", linewidth=0.6, linestyle="--", alpha=0.7)
         ax_rsi.axhline(30, color="green", linewidth=0.6, linestyle="--", alpha=0.7)
         ax_rsi.axhline(50, color="gray", linewidth=0.4, linestyle=":", alpha=0.5)
