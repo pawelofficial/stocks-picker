@@ -3,7 +3,7 @@ uvicorn[standard]
 sqlalchemy>=2.0
 yfinance
 pandas
-pandas-ta
+numpy
 matplotlib
 mplfinance
 jinja2
