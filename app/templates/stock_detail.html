@@ -107,12 +107,16 @@
 <p style="color:#8b949e;">No fundamental data yet. Refresh this ticker first.</p>
 {% endif %}
 
-<div style="margin-top:1.5rem;">
-    <button class="btn btn-secondary" onclick="refreshTicker()">
+<div style="margin-top:1.5rem; display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+    <button class="btn btn-secondary" id="btn-refresh" onclick="refreshTicker(false)">
         Refresh {{ ticker.symbol }}
     </button>
+    <button class="btn btn-primary" id="btn-full-refresh" onclick="refreshTicker(true)">
+        Full Re-download {{ ticker.symbol }}
+    </button>
+    <span id="refresh-status" style="color:#8b949e; font-size:.85rem;"></span>
     {% if sector %}
-    <a href="/sectors/{{ sector.id }}/screen" class="btn btn-secondary" style="margin-left:.5rem;">
+    <a href="/sectors/{{ sector.id }}/screen" class="btn btn-secondary">
         Back to {{ sector.name }} screener
     </a>
     {% endif %}
@@ -141,11 +145,49 @@ document.querySelectorAll('.tabs').forEach(tabGroup => {
     });
 });
 
-function refreshTicker() {
-    fetch('/api/refresh/symbol/{{ ticker.symbol }}', {method: 'POST'})
-        .then(r => r.json())
-        .then(() => { alert('Refresh started for {{ ticker.symbol }}. Reload in a minute.'); })
-        .catch(() => { alert('Refresh failed.'); });
+function refreshTicker(full) {
+    var url = '/api/refresh/symbol/{{ ticker.symbol }}' + (full ? '?full=true' : '');
+    var label = full ? 'Full re-download' : 'Refresh';
+    var statusEl = document.getElementById('refresh-status');
+    var btnRefresh = document.getElementById('btn-refresh');
+    var btnFull = document.getElementById('btn-full-refresh');
+
+    btnRefresh.disabled = true;
+    btnFull.disabled = true;
+    statusEl.textContent = label + ' started…';
+
+    fetch(url, {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            statusEl.textContent = label + ' running…';
+            pollJob(data.job_id, label);
+        })
+        .catch(function() {
+            statusEl.textContent = label + ' failed to start.';
+            btnRefresh.disabled = false;
+            btnFull.disabled = false;
+        });
+}
+
+function pollJob(jobId, label) {
+    var statusEl = document.getElementById('refresh-status');
+    var interval = setInterval(function() {
+        fetch('/api/refresh/status/' + jobId)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.status === 'done') {
+                    clearInterval(interval);
+                    statusEl.textContent = label + ' complete. Reloading…';
+                    location.reload();
+                } else if (data.status === 'error') {
+                    clearInterval(interval);
+                    statusEl.textContent = label + ' failed.';
+                    document.getElementById('btn-refresh').disabled = false;
+                    document.getElementById('btn-full-refresh').disabled = false;
+                }
+            })
+            .catch(function() {});
+    }, 3000);
 }
 </script>
 {% endblock %}

@@ -22,6 +22,42 @@ _TF_LABELS = {"D": "Daily", "W": "Weekly", "M": "Monthly", "All": "All"}
 def home(
     request: Request,
     strategy: str = "overall",
+    top: int = 20,
+    db: Session = Depends(get_db),
+):
+    strat = STRATEGIES.get(strategy) or STRATEGIES["overall"]
+    if top < 1:
+        top = 20
+
+    all_sectors = db.query(Sector).order_by(Sector.name).all()
+    results = []
+    for tf in ("D", "W", "M"):
+        scorer = Scorer(db, timeframe=tf)
+        for sec in all_sectors:
+            for r in scorer.screen_sector(sec.id, strat):
+                r.timeframe = tf
+                results.append(r)
+    results.sort(key=lambda r: r.composite_score, reverse=True)
+    total = len(results)
+    top_results = results[:top]
+
+    return request.app.state.templates.TemplateResponse(
+        "home.html",
+        {
+            "request": request,
+            "results": top_results,
+            "total": total,
+            "strategies": list_strategies(),
+            "current_strategy": strategy,
+            "top": top,
+        },
+    )
+
+
+@router.get("/screener", response_class=HTMLResponse)
+def global_screener(
+    request: Request,
+    strategy: str = "overall",
     tf: str = "D",
     sectors: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -86,7 +122,7 @@ def home(
     sector_summaries.sort(key=lambda s: s["composite_score"], reverse=True)
 
     return request.app.state.templates.TemplateResponse(
-        "home.html",
+        "screener_global.html",
         {
             "request": request,
             "results": results,

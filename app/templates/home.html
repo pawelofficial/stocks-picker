@@ -1,99 +1,33 @@
 {% extends "base.html" %}
-{% block title %}Stock Picker — Global Screener{% endblock %}
+{% block title %}Stock Picker — Top Picks{% endblock %}
 
 {% block content %}
-<h1>Global Screener</h1>
+<h1>Top Picks <span style="font-size:.85rem; color:#8b949e; font-weight:normal;">{{ results|length }} of {{ total }} across all sectors &amp; timeframes</span></h1>
 
 <div class="filter-bar">
     <div class="strategy-bar">
         <label>Strategy:</label>
         {% for s in strategies %}
-        <a href="/?strategy={{ s.key }}&tf={{ current_tf }}&sectors={{ selected_sectors_csv }}"
+        <a href="/?strategy={{ s.key }}&top={{ top }}"
            class="btn btn-sm {% if s.key == current_strategy %}active{% else %}btn-secondary{% endif %}"
            title="{{ s.description }}">
             {{ s.name }}
         </a>
         {% endfor %}
     </div>
-
     <div class="strategy-bar">
-        <label>Timeframe:</label>
-        {% for tf_key, tf_name in tf_labels.items() %}
-        <a href="/?strategy={{ current_strategy }}&tf={{ tf_key }}&sectors={{ selected_sectors_csv }}"
-           class="btn btn-sm {% if tf_key == current_tf %}active{% else %}btn-secondary{% endif %}">
-            {{ tf_name }}
+        <label>Show top:</label>
+        {% for n in [10, 20, 50, 100] %}
+        <a href="/?strategy={{ current_strategy }}&top={{ n }}"
+           class="btn btn-sm {% if n == top %}active{% else %}btn-secondary{% endif %}">
+            {{ n }}
         </a>
         {% endfor %}
     </div>
-
-    <div class="strategy-bar">
-        <label>Sectors:</label>
-        <div class="multiselect" id="sector-select">
-            <button class="btn btn-sm btn-secondary multiselect-toggle" type="button" id="sector-toggle">
-                {% if selected_sector_ids | length == all_sectors | length %}
-                    All sectors
-                {% else %}
-                    {{ selected_sector_ids | length }} of {{ all_sectors | length }}
-                {% endif %}
-                &#9662;
-            </button>
-            <div class="multiselect-dropdown" id="sector-dropdown">
-                <div class="multiselect-actions">
-                    <a href="#" id="select-all">All</a>
-                    <a href="#" id="select-none">None</a>
-                </div>
-                {% for s in all_sectors %}
-                <label class="multiselect-item">
-                    <input type="checkbox" value="{{ s.id }}"
-                           {% if s.id in selected_sector_ids %}checked{% endif %}>
-                    {{ s.name }}
-                </label>
-                {% endfor %}
-                <button class="btn btn-sm btn-primary multiselect-apply" id="sector-apply">Apply</button>
-            </div>
-        </div>
-    </div>
 </div>
 
-{% if sector_summaries %}
-<h2>Sector Averages</h2>
-<table id="sector-table">
-    <thead>
-        <tr>
-            <th data-col="rank" class="sortable num">#</th>
-            <th data-col="sector" class="sortable">Sector</th>
-            <th data-col="tf" class="sortable">TF</th>
-            <th data-col="tickers" class="sortable num">Tickers</th>
-            <th data-col="price_score" class="sortable num">Price %</th>
-            <th data-col="bb_score" class="sortable num">BB</th>
-            <th data-col="commodity_score" class="sortable num">Commodity</th>
-            <th data-col="pe_score" class="sortable num">P/E</th>
-            <th data-col="balance_score" class="sortable num">Balance</th>
-            <th data-col="composite_score" class="sortable num sorted-desc">Composite</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for s in sector_summaries %}
-        <tr>
-            <td class="num" data-val="{{ loop.index }}">{{ loop.index }}</td>
-            <td data-val="{{ s.sector_name }}">{{ s.sector_name }}</td>
-            <td data-val="{{ s.timeframe }}"><span class="tf-badge tf-{{ s.timeframe }}">{{ s.timeframe }}</span></td>
-            <td class="num" data-val="{{ s.ticker_count }}">{{ s.ticker_count }}</td>
-            <td class="num" data-val="{{ s.price_score }}"><span class="score {{ score_class(s.price_score) }}">{{ "%.0f"|format(s.price_score) }}</span></td>
-            <td class="num" data-val="{{ s.bb_score }}"><span class="score {{ score_class(s.bb_score) }}">{{ "%.0f"|format(s.bb_score) }}</span></td>
-            <td class="num" data-val="{{ s.commodity_score }}"><span class="score {{ score_class(s.commodity_score) }}">{{ "%.0f"|format(s.commodity_score) }}</span></td>
-            <td class="num" data-val="{{ s.pe_score }}"><span class="score {{ score_class(s.pe_score) }}">{{ "%.0f"|format(s.pe_score) }}</span></td>
-            <td class="num" data-val="{{ s.balance_score }}"><span class="score {{ score_class(s.balance_score) }}">{{ "%.0f"|format(s.balance_score) }}</span></td>
-            <td class="num" data-val="{{ s.composite_score }}"><span class="score {{ score_class(s.composite_score) }}"><strong>{{ "%.1f"|format(s.composite_score) }}</strong></span></td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% endif %}
-
 {% if results %}
-<h2>All Tickers</h2>
-<table id="screener-table">
+<table id="top-picks-table">
     <thead>
         <tr>
             <th data-col="rank" class="sortable num">#</th>
@@ -137,72 +71,31 @@
 {% block scripts %}
 <script>
 (function() {
-    /* ── Sortable tables ────────────────────────────────────────────── */
-    function makeSortable(tableEl) {
-        if (!tableEl) return;
-        var headers = tableEl.querySelectorAll('th.sortable');
-        var tbody = tableEl.querySelector('tbody');
-        headers.forEach(function(th) {
-            th.addEventListener('click', function() {
-                var col = th.cellIndex;
-                var isNum = th.classList.contains('num');
-                var isDesc = th.classList.contains('sorted-desc');
-                var ascending = isDesc;
-                headers.forEach(function(h) { h.classList.remove('sorted-asc', 'sorted-desc'); });
-                th.classList.add(ascending ? 'sorted-asc' : 'sorted-desc');
-                var rows = Array.from(tbody.querySelectorAll('tr'));
-                rows.sort(function(a, b) {
-                    var aVal = a.cells[col].getAttribute('data-val') || a.cells[col].textContent.trim();
-                    var bVal = b.cells[col].getAttribute('data-val') || b.cells[col].textContent.trim();
-                    if (isNum) {
-                        aVal = parseFloat(aVal) || 0;
-                        bVal = parseFloat(bVal) || 0;
-                        return ascending ? aVal - bVal : bVal - aVal;
-                    }
-                    return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-                });
-                rows.forEach(function(row) { tbody.appendChild(row); });
+    var table = document.getElementById('top-picks-table');
+    if (!table) return;
+    var headers = table.querySelectorAll('th.sortable');
+    var tbody = table.querySelector('tbody');
+    headers.forEach(function(th) {
+        th.addEventListener('click', function() {
+            var col = th.cellIndex;
+            var isNum = th.classList.contains('num');
+            var isDesc = th.classList.contains('sorted-desc');
+            var ascending = isDesc;
+            headers.forEach(function(h) { h.classList.remove('sorted-asc', 'sorted-desc'); });
+            th.classList.add(ascending ? 'sorted-asc' : 'sorted-desc');
+            var rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort(function(a, b) {
+                var aVal = a.cells[col].getAttribute('data-val') || a.cells[col].textContent.trim();
+                var bVal = b.cells[col].getAttribute('data-val') || b.cells[col].textContent.trim();
+                if (isNum) {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                    return ascending ? aVal - bVal : bVal - aVal;
+                }
+                return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
             });
+            rows.forEach(function(row) { tbody.appendChild(row); });
         });
-    }
-    makeSortable(document.getElementById('sector-table'));
-    makeSortable(document.getElementById('screener-table'));
-
-    /* ── Sector multiselect ─────────────────────────────────────────── */
-    var toggle = document.getElementById('sector-toggle');
-    var dropdown = document.getElementById('sector-dropdown');
-    var applyBtn = document.getElementById('sector-apply');
-    var selectAll = document.getElementById('select-all');
-    var selectNone = document.getElementById('select-none');
-    if (!toggle) return;
-
-    toggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        dropdown.classList.toggle('open');
-    });
-    document.addEventListener('click', function() { dropdown.classList.remove('open'); });
-    dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
-
-    var checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
-    selectAll.addEventListener('click', function(e) {
-        e.preventDefault();
-        checkboxes.forEach(function(cb) { cb.checked = true; });
-    });
-    selectNone.addEventListener('click', function(e) {
-        e.preventDefault();
-        checkboxes.forEach(function(cb) { cb.checked = false; });
-    });
-
-    applyBtn.addEventListener('click', function() {
-        var ids = [];
-        checkboxes.forEach(function(cb) { if (cb.checked) ids.push(cb.value); });
-        var params = new URLSearchParams(window.location.search);
-        if (ids.length > 0) {
-            params.set('sectors', ids.join(','));
-        } else {
-            params.delete('sectors');
-        }
-        window.location.search = params.toString();
     });
 })();
 </script>

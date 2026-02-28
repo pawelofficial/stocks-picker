@@ -1,4 +1,6 @@
 import logging
+import uuid
+from typing import Dict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -11,8 +13,10 @@ from app.services.indicators import compute_all_for_sector, compute_all_for_symb
 router = APIRouter()
 log = logging.getLogger(__name__)
 
+_jobs: Dict[str, str] = {}
 
-def _bg_refresh_sector(sector_id: int):
+
+def _bg_refresh_sector(sector_id: int, job_id: str):
     """Run in background thread — needs its own session."""
     session = SessionLocal()
     try:
@@ -20,22 +24,34 @@ def _bg_refresh_sector(sector_id: int):
         log.info("BG refresh sector %d: %s rows, %s errors", sector_id, stats.price_rows_written, len(stats.errors))
         n = compute_all_for_sector(session, sector_id)
         log.info("BG indicators sector %d: %d rows", sector_id, n)
+        _jobs[job_id] = "done"
     except Exception:
         log.exception("BG refresh sector %d failed", sector_id)
+        _jobs[job_id] = "error"
     finally:
         session.close()
 
 
-def _bg_refresh_symbol(symbol: str):
+def _bg_refresh_symbol(symbol: str, full: bool, job_id: str):
     session = SessionLocal()
     try:
-        stats = refresh_symbol(session, symbol)
-        log.info("BG refresh %s: %s rows", symbol, stats.price_rows_written)
-        compute_all_for_symbol(session, symbol)
+        stats = refresh_symbol(session, symbol, full=full)
+        log.info("BG refresh %s (full=%s): %s rows", symbol, full, stats.price_rows_written)
+        compute_all_for_symbol(session, symbol, force=full)
+        _jobs[job_id] = "done"
     except Exception:
         log.exception("BG refresh %s failed", symbol)
+        _jobs[job_id] = "error"
     finally:
         session.close()
+
+
+@router.get("/api/refresh/status/{job_id}")
+def refresh_status(job_id: str):
+    status = _jobs.get(job_id, "running")
+    if status in ("done", "error"):
+        _jobs.pop(job_id, None)
+    return {"job_id": job_id, "status": status}
 
 
 @router.post("/api/refresh/sector/{sector_id}")
@@ -47,14 +63,19 @@ def trigger_sector_refresh(
     sector = db.query(Sector).get(sector_id)
     if not sector:
         raise HTTPException(status_code=404, detail="Sector not found")
-    background_tasks.add_task(_bg_refresh_sector, sector_id)
-    return {"status": "started", "sector": sector.name}
+    job_id = uuid.uuid4().hex[:12]
+    _jobs[job_id] = "running"
+    background_tasks.add_task(_bg_refresh_sector, sector_id, job_id)
+    return {"status": "started", "sector": sector.name, "job_id": job_id}
 
 
 @router.post("/api/refresh/symbol/{symbol}")
 def trigger_symbol_refresh(
     symbol: str,
     background_tasks: BackgroundTasks,
+    full: bool = False,
 ):
-    background_tasks.add_task(_bg_refresh_symbol, symbol.upper())
-    return {"status": "started", "symbol": symbol.upper()}
+    job_id = uuid.uuid4().hex[:12]
+    _jobs[job_id] = "running"
+    background_tasks.add_task(_bg_refresh_symbol, symbol.upper(), full, job_id)
+    return {"status": "started", "symbol": symbol.upper(), "full": full, "job_id": job_id}
