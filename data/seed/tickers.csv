@@ -20,12 +20,14 @@ SCCO,Southern Copper,NYSE,Copper & Mining
 TECK,Teck Resources,NYSE,Copper & Mining
 RIO,Rio Tinto,NYSE,Copper & Mining
 BHP,BHP Group,NYSE,Copper & Mining
-NEM,Newmont,NYSE,Gold Mining
-GOLD,Barrick Gold,NYSE,Gold Mining
-AEM,Agnico Eagle Mines,NYSE,Gold Mining
-WPM,Wheaton Precious Metals,NYSE,Gold Mining
-KGC,Kinross Gold,NYSE,Gold Mining
-FNV,Franco-Nevada,NYSE,Gold Mining
+NEM,Newmont,NYSE,Gold Silver
+IAG,Iamgold,NYSE,Gold Silver
+AG,First Majestic, NYSE, Gold Silver
+GOLD,Barrick Gold,NYSE,Gold Silver
+AEM,Agnico Eagle Mines,NYSE,Gold Silver
+WPM,Wheaton Precious Metals,NYSE,Gold Silver
+KGC,Kinross Gold,NYSE,Gold Silver
+FNV,Franco-Nevada,NYSE,Gold Silver
 NUE,Nucor,NYSE,Steel
 STLD,Steel Dynamics,NASDAQ,Steel
 X,United States Steel,NYSE,Steel

@@ -240,6 +240,7 @@ class StockResult:
     composite_score: float
     strategy_key: str
     timeframe: str = "D"
+    sector_name: str = ""
 
 
 class Scorer:
@@ -382,6 +383,9 @@ class Scorer:
         strategy: ScoringStrategy,
     ) -> list[StockResult]:
         """Score all tickers in a sector, return sorted by composite desc."""
+        sector = self.session.query(Sector).get(sector_id)
+        sector_name = sector.name if sector else ""
+
         tickers = (
             self.session.query(Ticker)
             .filter_by(sector_id=sector_id)
@@ -390,13 +394,13 @@ class Scorer:
         if not tickers:
             return []
 
-        # Pre-fetch commodity data once for the whole sector
         commodity_data = self._commodity_closes(sector_id)
 
-        results = [
-            self.score_stock(t, strategy, commodity_data)
-            for t in tickers
-        ]
+        results = []
+        for t in tickers:
+            r = self.score_stock(t, strategy, commodity_data)
+            r.sector_name = sector_name
+            results.append(r)
         results.sort(key=lambda r: r.composite_score, reverse=True)
 
         # Persist to screening_scores
