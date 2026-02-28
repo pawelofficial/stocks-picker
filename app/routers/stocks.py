@@ -18,11 +18,16 @@ router = APIRouter()
 # ── Screener page ────────────────────────────────────────────────────────────
 
 
+_VALID_TF = {"D", "W", "M", "All"}
+_TF_LABELS = {"D": "Daily", "W": "Weekly", "M": "Monthly", "All": "All"}
+
+
 @router.get("/sectors/{sector_id}/screen", response_class=HTMLResponse)
 def screener_page(
     request: Request,
     sector_id: int,
     strategy: str = "overall",
+    tf: str = "D",
     db: Session = Depends(get_db),
 ):
     sector = db.query(Sector).get(sector_id)
@@ -33,8 +38,22 @@ def screener_page(
     if strat is None:
         return HTMLResponse(f"Unknown strategy: {strategy}", status_code=400)
 
-    scorer = Scorer(db)
-    results = scorer.screen_sector(sector_id, strat)
+    if tf not in _VALID_TF:
+        tf = "D"
+
+    if tf == "All":
+        results = []
+        for t in ("D", "W", "M"):
+            scorer = Scorer(db, timeframe=t)
+            for r in scorer.screen_sector(sector_id, strat):
+                r.timeframe = t
+                results.append(r)
+        results.sort(key=lambda r: r.composite_score, reverse=True)
+    else:
+        scorer = Scorer(db, timeframe=tf)
+        results = scorer.screen_sector(sector_id, strat)
+        for r in results:
+            r.timeframe = tf
 
     return request.app.state.templates.TemplateResponse(
         "screener.html",
@@ -44,6 +63,8 @@ def screener_page(
             "results": results,
             "strategies": list_strategies(),
             "current_strategy": strategy,
+            "current_tf": tf,
+            "tf_labels": _TF_LABELS,
         },
     )
 
@@ -52,6 +73,7 @@ def screener_page(
 def screener_api(
     sector_id: int,
     strategy: str = "overall",
+    tf: str = "D",
     db: Session = Depends(get_db),
 ):
     sector = db.query(Sector).get(sector_id)
@@ -62,7 +84,10 @@ def screener_api(
     if strat is None:
         raise HTTPException(status_code=400, detail=f"Unknown strategy: {strategy}")
 
-    scorer = Scorer(db)
+    if tf not in _VALID_TF:
+        tf = "D"
+
+    scorer = Scorer(db, timeframe=tf)
     results = scorer.screen_sector(sector_id, strat)
     return [
         {

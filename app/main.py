@@ -1,19 +1,22 @@
 """FastAPI application factory."""
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
+
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.database import init_db
+from app.logging_config import configure_logging
 from app.routers import charts, refresh, sectors, stocks
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-)
+configure_logging()
 
 app = FastAPI(title="Stock Picker", version="0.1.0")
 

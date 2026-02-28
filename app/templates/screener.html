@@ -4,46 +4,60 @@
 {% block content %}
 <h1>{{ sector.name }} — Screener</h1>
 
-<div class="strategy-bar">
-    <label>Strategy:</label>
-    {% for s in strategies %}
-    <a href="/sectors/{{ sector.id }}/screen?strategy={{ s.key }}"
-       class="btn btn-sm {% if s.key == current_strategy %}active{% else %}btn-secondary{% endif %}"
-       title="{{ s.description }}">
-        {{ s.name }}
-    </a>
-    {% endfor %}
+<div class="filter-bar">
+    <div class="strategy-bar">
+        <label>Strategy:</label>
+        {% for s in strategies %}
+        <a href="/sectors/{{ sector.id }}/screen?strategy={{ s.key }}&tf={{ current_tf }}"
+           class="btn btn-sm {% if s.key == current_strategy %}active{% else %}btn-secondary{% endif %}"
+           title="{{ s.description }}">
+            {{ s.name }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <div class="strategy-bar">
+        <label>Timeframe:</label>
+        {% for tf_key, tf_name in tf_labels.items() %}
+        <a href="/sectors/{{ sector.id }}/screen?strategy={{ current_strategy }}&tf={{ tf_key }}"
+           class="btn btn-sm {% if tf_key == current_tf %}active{% else %}btn-secondary{% endif %}">
+            {{ tf_name }}
+        </a>
+        {% endfor %}
+    </div>
 </div>
 
 {% if results %}
-<table>
+<table id="screener-table">
     <thead>
         <tr>
-            <th>#</th>
-            <th>Ticker</th>
-            <th>Name</th>
-            <th class="num">Price</th>
-            <th class="num">Price %</th>
-            <th class="num">BB</th>
-            <th class="num">Commodity</th>
-            <th class="num">P/E</th>
-            <th class="num">Balance</th>
-            <th class="num">Composite</th>
+            <th data-col="rank" class="sortable num">#</th>
+            <th data-col="symbol" class="sortable">Ticker</th>
+            <th data-col="name" class="sortable">Name</th>
+            <th data-col="tf" class="sortable">TF</th>
+            <th data-col="price" class="sortable num">Price</th>
+            <th data-col="price_score" class="sortable num">Price %</th>
+            <th data-col="bb_score" class="sortable num">BB</th>
+            <th data-col="commodity_score" class="sortable num">Commodity</th>
+            <th data-col="pe_score" class="sortable num">P/E</th>
+            <th data-col="balance_score" class="sortable num">Balance</th>
+            <th data-col="composite_score" class="sortable num sorted-desc">Composite</th>
         </tr>
     </thead>
     <tbody>
         {% for r in results %}
         <tr>
-            <td>{{ loop.index }}</td>
-            <td><a href="/stocks/{{ r.symbol }}">{{ r.symbol }}</a></td>
-            <td>{{ r.name }}</td>
-            <td class="num">{{ "%.2f"|format(r.current_price) if r.current_price else "—" }}</td>
-            <td class="num"><span class="score {{ score_class(r.price_score) }}">{{ "%.0f"|format(r.price_score) }}</span></td>
-            <td class="num"><span class="score {{ score_class(r.bb_score) }}">{{ "%.0f"|format(r.bb_score) }}</span></td>
-            <td class="num"><span class="score {{ score_class(r.commodity_score) }}">{{ "%.0f"|format(r.commodity_score) }}</span></td>
-            <td class="num"><span class="score {{ score_class(r.pe_score) }}">{{ "%.0f"|format(r.pe_score) }}</span></td>
-            <td class="num"><span class="score {{ score_class(r.balance_score) }}">{{ "%.0f"|format(r.balance_score) }}</span></td>
-            <td class="num"><span class="score {{ score_class(r.composite_score) }}"><strong>{{ "%.1f"|format(r.composite_score) }}</strong></span></td>
+            <td class="num" data-val="{{ loop.index }}">{{ loop.index }}</td>
+            <td data-val="{{ r.symbol }}"><a href="/stocks/{{ r.symbol }}">{{ r.symbol }}</a></td>
+            <td data-val="{{ r.name }}">{{ r.name }}</td>
+            <td data-val="{{ r.timeframe }}"><span class="tf-badge tf-{{ r.timeframe }}">{{ r.timeframe }}</span></td>
+            <td class="num" data-val="{{ r.current_price or 0 }}">{{ "%.2f"|format(r.current_price) if r.current_price else "—" }}</td>
+            <td class="num" data-val="{{ r.price_score }}"><span class="score {{ score_class(r.price_score) }}">{{ "%.0f"|format(r.price_score) }}</span></td>
+            <td class="num" data-val="{{ r.bb_score }}"><span class="score {{ score_class(r.bb_score) }}">{{ "%.0f"|format(r.bb_score) }}</span></td>
+            <td class="num" data-val="{{ r.commodity_score }}"><span class="score {{ score_class(r.commodity_score) }}">{{ "%.0f"|format(r.commodity_score) }}</span></td>
+            <td class="num" data-val="{{ r.pe_score }}"><span class="score {{ score_class(r.pe_score) }}">{{ "%.0f"|format(r.pe_score) }}</span></td>
+            <td class="num" data-val="{{ r.balance_score }}"><span class="score {{ score_class(r.balance_score) }}">{{ "%.0f"|format(r.balance_score) }}</span></td>
+            <td class="num" data-val="{{ r.composite_score }}"><span class="score {{ score_class(r.composite_score) }}"><strong>{{ "%.1f"|format(r.composite_score) }}</strong></span></td>
         </tr>
         {% endfor %}
     </tbody>
@@ -51,4 +65,43 @@
 {% else %}
 <p style="color:#8b949e; margin-top:1rem;">No data yet. Hit <strong>Refresh Data</strong> on the dashboard first, then come back.</p>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var table = document.getElementById('screener-table');
+    if (!table) return;
+    var headers = table.querySelectorAll('th.sortable');
+    var tbody = table.querySelector('tbody');
+
+    headers.forEach(function(th) {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', function() {
+            var col = th.cellIndex;
+            var isNum = th.classList.contains('num');
+            var isDesc = th.classList.contains('sorted-desc');
+            var ascending = isDesc;
+
+            headers.forEach(function(h) {
+                h.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            th.classList.add(ascending ? 'sorted-asc' : 'sorted-desc');
+
+            var rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort(function(a, b) {
+                var aVal = a.cells[col].getAttribute('data-val') || a.cells[col].textContent.trim();
+                var bVal = b.cells[col].getAttribute('data-val') || b.cells[col].textContent.trim();
+                if (isNum) {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                    return ascending ? aVal - bVal : bVal - aVal;
+                }
+                return ascending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+            rows.forEach(function(row) { tbody.appendChild(row); });
+        });
+    });
+})();
+</script>
 {% endblock %}

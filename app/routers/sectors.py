@@ -9,6 +9,13 @@ router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return request.app.state.templates.TemplateResponse(
+        "home.html", {"request": request},
+    )
+
+
+@router.get("/sectors", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
     sectors = db.query(Sector).order_by(Sector.name).all()
     sector_data = []

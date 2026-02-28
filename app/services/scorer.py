@@ -239,20 +239,22 @@ class StockResult:
     balance_score: float
     composite_score: float
     strategy_key: str
+    timeframe: str = "D"
 
 
 class Scorer:
     """Pulls data from the DB and scores every ticker in a sector."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, timeframe: str = "D"):
         self.session = session
+        self.timeframe = timeframe
 
     # ── data loaders ─────────────────────────────────────────────────────
 
-    def _daily_closes(self, symbol: str) -> list[float]:
+    def _closes(self, symbol: str) -> list[float]:
         rows = (
             self.session.query(PriceHistory.close)
-            .filter_by(symbol=symbol, timeframe="D")
+            .filter_by(symbol=symbol, timeframe=self.timeframe)
             .order_by(PriceHistory.date)
             .all()
         )
@@ -261,7 +263,7 @@ class Scorer:
     def _latest_bb_pct(self, symbol: str) -> float | None:
         row = (
             self.session.query(TechnicalIndicator.bb_pct)
-            .filter_by(symbol=symbol, timeframe="D")
+            .filter_by(symbol=symbol, timeframe=self.timeframe)
             .order_by(TechnicalIndicator.date.desc())
             .first()
         )
@@ -282,7 +284,7 @@ class Scorer:
         for (sym,) in commodities:
             rows = (
                 self.session.query(PriceHistory.close)
-                .filter_by(symbol=sym, timeframe="D")
+                .filter_by(symbol=sym, timeframe=self.timeframe)
                 .order_by(PriceHistory.date)
                 .all()
             )
@@ -325,7 +327,7 @@ class Scorer:
 
         # Always load closes — needed for display (current_price) even if
         # "price" component has zero weight.
-        closes = self._daily_closes(ticker.symbol)
+        closes = self._closes(ticker.symbol)
         current_price = closes[-1] if closes else None
 
         price_sc = compute_price_score(closes, current_price) if ("price" in active) else 50.0

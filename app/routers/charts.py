@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -12,7 +14,7 @@ router = APIRouter()
 def chart_png(
     symbol: str,
     tf: str = Query("D", pattern="^[DWM]$"),
-    bars: int | None = Query(None, ge=50, le=2000),
+    bars: Optional[int] = Query(None, ge=50, le=2000),
     db: Session = Depends(get_db),
 ):
     """Return a PNG chart for the given symbol and timeframe."""

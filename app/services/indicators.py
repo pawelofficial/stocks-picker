@@ -166,21 +166,25 @@ def compute_indicators(
         log.debug("%s/%s: indicators up to date", symbol, timeframe)
         return 0
 
-    stmt = sqlite_upsert(TechnicalIndicator).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["symbol", "date", "timeframe"],
-        set_={
-            "rsi_14": stmt.excluded.rsi_14,
-            "sma_20": stmt.excluded.sma_20,
-            "sma_50": stmt.excluded.sma_50,
-            "sma_200": stmt.excluded.sma_200,
-            "bb_upper": stmt.excluded.bb_upper,
-            "bb_middle": stmt.excluded.bb_middle,
-            "bb_lower": stmt.excluded.bb_lower,
-            "bb_pct": stmt.excluded.bb_pct,
-        },
-    )
-    session.execute(stmt)
+    # SQLite limits bind params (~999). Batch to avoid "too many SQL variables"
+    BATCH_SIZE = 80  # 80 rows * 11 cols = 880 < 999
+    for i in range(0, len(rows), BATCH_SIZE):
+        batch = rows[i : i + BATCH_SIZE]
+        stmt = sqlite_upsert(TechnicalIndicator).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["symbol", "date", "timeframe"],
+            set_={
+                "rsi_14": stmt.excluded.rsi_14,
+                "sma_20": stmt.excluded.sma_20,
+                "sma_50": stmt.excluded.sma_50,
+                "sma_200": stmt.excluded.sma_200,
+                "bb_upper": stmt.excluded.bb_upper,
+                "bb_middle": stmt.excluded.bb_middle,
+                "bb_lower": stmt.excluded.bb_lower,
+                "bb_pct": stmt.excluded.bb_pct,
+            },
+        )
+        session.execute(stmt)
     session.commit()
     log.info("%s/%s: upserted %d indicator rows", symbol, timeframe, len(rows))
     return len(rows)

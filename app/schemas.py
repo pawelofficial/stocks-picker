@@ -1,4 +1,4 @@
-from __future__ import annotations
+from typing import Dict, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -9,7 +9,7 @@ from pydantic import BaseModel, model_validator
 class SectorOut(BaseModel):
     id: int
     name: str
-    description: str | None = None
+    description: Optional[str] = None
     ticker_count: int = 0
 
     class Config:
@@ -20,8 +20,8 @@ class TickerOut(BaseModel):
     id: int
     symbol: str
     name: str
-    exchange: str | None = None
-    sector_id: int | None = None
+    exchange: Optional[str] = None
+    sector_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -46,7 +46,7 @@ class StrategyInfo(BaseModel):
     key: str
     name: str
     description: str
-    weights: dict[str, float]
+    weights: Dict[str, float]
 
 
 class CustomStrategyIn(BaseModel):
@@ -56,7 +56,7 @@ class CustomStrategyIn(BaseModel):
     Weights are auto-normalised to sum to 1.0.
     """
     name: str = "custom"
-    weights: dict[str, float]
+    weights: Dict[str, float]
 
     @model_validator(mode="after")
     def _validate_weights(self) -> "CustomStrategyIn":
@@ -75,8 +75,8 @@ class StockScoreOut(BaseModel):
     """One row of the screener table."""
     symbol: str
     name: str
-    exchange: str | None = None
-    price: float | None = None
+    exchange: Optional[str] = None
+    price: Optional[float] = None
     price_score: float
     bb_score: float
     commodity_score: float

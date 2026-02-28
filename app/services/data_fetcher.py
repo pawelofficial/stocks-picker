@@ -1,19 +1,13 @@
-"""Fetch price history and fundamentals from Yahoo Finance via yfinance.
-
-Implements incremental loading:
-- For each (symbol, timeframe), looks up the latest date already in the DB.
-- Only fetches rows *after* that date, so re-runs are cheap.
-- Fundamentals are re-fetched at most once per day per symbol.
-"""
+"""Fetch price history and fundamentals via yfinance."""
 
 from __future__ import annotations
 
 import logging
+import os
+import time
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
-import pandas as pd
-import yfinance as yf
 from sqlalchemy import func
 from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
 from sqlalchemy.orm import Session
@@ -25,19 +19,37 @@ from app.models import (
     SectorCommodity,
     Ticker,
 )
+from app.services.data_providers import get_provider
 
 log = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-# yfinance interval strings keyed by our timeframe codes
-_YF_INTERVAL = {"D": "1d", "W": "1wk", "M": "1mo"}
-
 # How far back to go on the very first (full) download
-_INITIAL_PERIOD = {"D": "10y", "W": "10y", "M": "max"}
+_INITIAL_PERIOD = {"D": "max", "W": "max", "M": "max"}
 
 # Minimum gap before we bother fetching again for a timeframe
 _MIN_REFRESH_DAYS = {"D": 0, "W": 5, "M": 25}
+
+# Delay between requests (seconds) — for yfinance; Polygon has its own throttle
+_DELAY_BETWEEN_REQUESTS = 4
+_RETRY_DELAY_NORMAL = (3, 5, 7)
+_RETRY_DELAY_429 = (60, 120, 180)
+
+
+def _is_rate_limited(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "429" in msg or "too many requests" in msg
+
+
+def _retry_delay(exc: Exception, attempt: int) -> int:
+    if _is_rate_limited(exc):
+        return _RETRY_DELAY_429[min(attempt, len(_RETRY_DELAY_429) - 1)]
+    return _RETRY_DELAY_NORMAL[min(attempt, len(_RETRY_DELAY_NORMAL) - 1)]
+
+
+def _provider():
+    return get_provider()
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,18 +71,22 @@ def _upsert_price_rows(session: Session, rows: list[dict]) -> int:
     """Bulk upsert into price_history. Returns number of rows touched."""
     if not rows:
         return 0
-    stmt = sqlite_upsert(PriceHistory).values(rows)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["symbol", "date", "timeframe"],
-        set_={
-            "open": stmt.excluded.open,
-            "high": stmt.excluded.high,
-            "low": stmt.excluded.low,
-            "close": stmt.excluded.close,
-            "volume": stmt.excluded.volume,
-        },
-    )
-    session.execute(stmt)
+    # SQLite limits bind params (~999). Batch to avoid "too many SQL variables"
+    BATCH_SIZE = 100  # 100 rows * 8 cols = 800 < 999
+    for i in range(0, len(rows), BATCH_SIZE):
+        batch = rows[i : i + BATCH_SIZE]
+        stmt = sqlite_upsert(PriceHistory).values(batch)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["symbol", "date", "timeframe"],
+            set_={
+                "open": stmt.excluded.open,
+                "high": stmt.excluded.high,
+                "low": stmt.excluded.low,
+                "close": stmt.excluded.close,
+                "volume": stmt.excluded.volume,
+            },
+        )
+        session.execute(stmt)
     return len(rows)
 
 
@@ -88,16 +104,28 @@ def _last_fundamental_date(session: Session, symbol: str) -> date | None:
 # ── Core fetch functions ─────────────────────────────────────────────────────
 
 
+def _delete_price_history(session: Session, symbol: str, timeframe: str) -> None:
+    """Delete all stored price rows for (symbol, timeframe)."""
+    session.query(PriceHistory).filter_by(symbol=symbol, timeframe=timeframe).delete()
+    session.commit()
+
+
 def fetch_price_history(
     session: Session,
     symbol: str,
     timeframe: str = "D",
+    period: str | None = None,
+    full: bool = False,
 ) -> int:
     """Fetch OHLCV for *symbol* at the given *timeframe* ('D', 'W', 'M').
 
     Incremental: only downloads data after the last stored date.
+    If *full* is True, wipes existing data and re-downloads everything.
     Returns the number of new/updated rows written.
     """
+    if full:
+        _delete_price_history(session, symbol, timeframe)
+
     last = _last_stored_date(session, symbol, timeframe)
 
     if last is not None:
@@ -105,42 +133,58 @@ def fetch_price_history(
         if gap <= _MIN_REFRESH_DAYS[timeframe]:
             log.debug("%s/%s: up to date (last=%s, gap=%dd)", symbol, timeframe, last, gap)
             return 0
-        # Fetch from the day after last stored date
-        start = (last + timedelta(days=1)).isoformat()
-        log.info("%s/%s: incremental from %s", symbol, timeframe, start)
-        df = yf.Ticker(symbol).history(
-            start=start,
-            interval=_YF_INTERVAL[timeframe],
-            auto_adjust=True,
-        )
+        start = last + timedelta(days=1)
+        end = date.today()
+        log.info("%s/%s: incremental from %s", symbol, timeframe, start.isoformat())
+        full_history = False
     else:
-        # First-time full download
-        log.info("%s/%s: full download (%s)", symbol, timeframe, _INITIAL_PERIOD[timeframe])
-        df = yf.Ticker(symbol).history(
-            period=_INITIAL_PERIOD[timeframe],
-            interval=_YF_INTERVAL[timeframe],
-            auto_adjust=True,
-        )
+        period_used = period or _INITIAL_PERIOD.get(timeframe, "max")
+        log.info("%s/%s: full download (%s)", symbol, timeframe, period_used)
+        start = None
+        end = date.today()
+        full_history = True
 
-    if df is None or df.empty:
+    provider = _provider()
+    period_arg = (period or _INITIAL_PERIOD.get(timeframe, "max")) if full_history else None
+    rows_raw = []
+    for attempt in range(3):
+        try:
+            rows_raw = provider.fetch_price_history(
+                symbol,
+                timeframe,
+                start=start,
+                end=end,
+                full_history=full_history,
+                period=period_arg,
+            )
+            break
+        except Exception as e:
+            if attempt < 2:
+                delay = _retry_delay(e, attempt)
+                rate_msg = " (rate limited)" if _is_rate_limited(e) else ""
+                log.warning("%s/%s: fetch failed (attempt %d/3)%s, retrying in %ds: %s", symbol, timeframe, attempt + 1, rate_msg, delay, e)
+                time.sleep(delay)
+            else:
+                log.exception("%s/%s: failed after 3 attempts", symbol, timeframe)
+                return 0
+
+    if not rows_raw:
         log.warning("%s/%s: no data returned", symbol, timeframe)
         return 0
 
-    rows = []
-    for ts, row in df.iterrows():
-        dt = ts.date() if hasattr(ts, "date") else ts
-        rows.append(
-            {
-                "symbol": symbol,
-                "date": str(dt),
-                "timeframe": timeframe,
-                "open": float(row["Open"]) if pd.notna(row["Open"]) else None,
-                "high": float(row["High"]) if pd.notna(row["High"]) else None,
-                "low": float(row["Low"]) if pd.notna(row["Low"]) else None,
-                "close": float(row["Close"]) if pd.notna(row["Close"]) else None,
-                "volume": float(row["Volume"]) if pd.notna(row["Volume"]) else None,
-            }
-        )
+    rows = [
+        {
+            "symbol": symbol,
+            "date": r["date"],
+            "timeframe": timeframe,
+            "open": r.get("open"),
+            "high": r.get("high"),
+            "low": r.get("low"),
+            "close": r.get("close"),
+            "volume": r.get("volume"),
+        }
+        for r in rows_raw
+    ]
 
     n = _upsert_price_rows(session, rows)
     session.commit()
@@ -161,17 +205,29 @@ def fetch_fundamentals(session: Session, symbol: str) -> bool:
         return False
 
     log.info("%s: fetching fundamentals", symbol)
-    try:
-        info = yf.Ticker(symbol).info
-    except Exception:
-        log.exception("%s: failed to fetch info", symbol)
-        return False
+    provider = _provider()
+    info = None
+    for attempt in range(3):
+        try:
+            info = provider.fetch_fundamentals(symbol)
+            break
+        except Exception as e:
+            if attempt < 2:
+                delay = _retry_delay(e, attempt)
+                rate_msg = " (rate limited)" if _is_rate_limited(e) else ""
+                log.warning("%s: fetch failed (attempt %d/3)%s, retrying in %ds: %s", symbol, attempt + 1, rate_msg, delay, e)
+                time.sleep(delay)
+            else:
+                log.exception("%s: failed to fetch info after 3 attempts", symbol)
+                return False
 
     if not info:
         log.warning("%s: empty info dict", symbol)
         return False
 
-    # Compute interest coverage from EBITDA / interestExpense if available
+    # debtToEquity: both providers return ratio (yfinance converts % in provider)
+    debt_to_equity = info.get("debtToEquity")
+
     ebitda = info.get("ebitda")
     interest = info.get("interestExpense")
     if ebitda and interest and interest != 0:
@@ -185,7 +241,7 @@ def fetch_fundamentals(session: Session, symbol: str) -> bool:
         pe_ratio=info.get("trailingPE"),
         forward_pe=info.get("forwardPE"),
         price_to_book=info.get("priceToBook"),
-        debt_to_equity=_safe_div100(info.get("debtToEquity")),  # yfinance returns D/E as %
+        debt_to_equity=debt_to_equity,
         current_ratio=info.get("currentRatio"),
         interest_coverage=interest_coverage,
         roe=info.get("returnOnEquity"),
@@ -218,13 +274,6 @@ def fetch_fundamentals(session: Session, symbol: str) -> bool:
     return True
 
 
-def _safe_div100(val: float | None) -> float | None:
-    """yfinance returns debtToEquity as a percentage (e.g. 85.0 for 0.85)."""
-    if val is None:
-        return None
-    return val / 100.0
-
-
 # ── High-level orchestrators ─────────────────────────────────────────────────
 
 
@@ -240,19 +289,20 @@ class RefreshStats:
             self.errors = []
 
 
-def refresh_symbol(session: Session, symbol: str) -> RefreshStats:
+def refresh_symbol(session: Session, symbol: str, period: str | None = None, full: bool = False) -> RefreshStats:
     """Fetch all timeframes + fundamentals for a single symbol."""
     stats = RefreshStats()
     stats.symbols_processed = 1
 
     for tf in ("D", "W", "M"):
         try:
-            n = fetch_price_history(session, symbol, tf)
+            n = fetch_price_history(session, symbol, tf, period=period, full=full)
             stats.price_rows_written += n
         except Exception as e:
             msg = f"{symbol}/{tf}: {e}"
             log.exception(msg)
             stats.errors.append(msg)
+        time.sleep(_DELAY_BETWEEN_REQUESTS)
 
     try:
         if fetch_fundamentals(session, symbol):
@@ -265,7 +315,7 @@ def refresh_symbol(session: Session, symbol: str) -> RefreshStats:
     return stats
 
 
-def refresh_sector(session: Session, sector_id: int) -> RefreshStats:
+def refresh_sector(session: Session, sector_id: int, period: str | None = None, full: bool = False) -> RefreshStats:
     """Fetch all tickers + commodities for a sector. Incremental."""
     total = RefreshStats()
 
@@ -290,11 +340,12 @@ def refresh_sector(session: Session, sector_id: int) -> RefreshStats:
     )
 
     for sym in all_symbols:
-        s = refresh_symbol(session, sym)
+        s = refresh_symbol(session, sym, period=period, full=full)
         total.symbols_processed += s.symbols_processed
         total.price_rows_written += s.price_rows_written
         total.fundamentals_updated += s.fundamentals_updated
         total.errors.extend(s.errors)
+        time.sleep(_DELAY_BETWEEN_REQUESTS)
 
     log.info(
         "Sector %d done: %d symbols, %d price rows, %d fundamentals, %d errors",
@@ -307,12 +358,12 @@ def refresh_sector(session: Session, sector_id: int) -> RefreshStats:
     return total
 
 
-def refresh_all(session: Session) -> RefreshStats:
+def refresh_all(session: Session, period: str | None = None, full: bool = False) -> RefreshStats:
     """Refresh every sector in the DB."""
     total = RefreshStats()
     sectors = session.query(Sector).all()
     for sector in sectors:
-        s = refresh_sector(session, sector.id)
+        s = refresh_sector(session, sector.id, period=period, full=full)
         total.symbols_processed += s.symbols_processed
         total.price_rows_written += s.price_rows_written
         total.fundamentals_updated += s.fundamentals_updated
