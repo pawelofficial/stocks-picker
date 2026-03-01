@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from sqlalchemy import func as sa_func
+
 from app.database import get_db
-from app.models import Sector, Ticker, SectorCommodity
+from app.models import Sector, Ticker, SectorCommodity, ScreeningScore
 from app.services.scorer import (
     STRATEGIES,
     Scorer,
@@ -141,16 +143,38 @@ def global_screener(
 @router.get("/sectors", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
     sectors = db.query(Sector).order_by(Sector.name).all()
+
+    sector_symbols = {}
+    for s in sectors:
+        syms = [t.symbol for t in db.query(Ticker.symbol).filter_by(sector_id=s.id).all()]
+        sector_symbols[s.id] = syms
+
+    score_avgs = (
+        db.query(
+            Ticker.sector_id,
+            sa_func.avg(ScreeningScore.composite_score),
+            sa_func.avg(ScreeningScore.bb_score),
+        )
+        .join(Ticker, Ticker.symbol == ScreeningScore.symbol)
+        .filter(ScreeningScore.strategy == "overall")
+        .group_by(Ticker.sector_id)
+        .all()
+    )
+    avg_map = {sid: (comp, bb) for sid, comp, bb in score_avgs}
+
     sector_data = []
     for s in sectors:
-        ticker_count = db.query(Ticker).filter_by(sector_id=s.id).count()
+        ticker_count = len(sector_symbols.get(s.id, []))
         commodity_count = db.query(SectorCommodity).filter_by(sector_id=s.id).count()
+        avgs = avg_map.get(s.id)
         sector_data.append({
             "id": s.id,
             "name": s.name,
             "description": s.description or "",
             "ticker_count": ticker_count,
             "commodity_count": commodity_count,
+            "avg_composite": avgs[0] if avgs else None,
+            "avg_bb": avgs[1] if avgs else None,
         })
     return request.app.state.templates.TemplateResponse(
         "dashboard.html",

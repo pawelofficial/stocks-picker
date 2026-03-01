@@ -22,10 +22,12 @@ Usage
 
 from __future__ import annotations
 
+import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from statistics import median
-from typing import Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -243,35 +245,96 @@ class StockResult:
     sector_name: str = ""
 
 
+_sector_cache: Dict[Tuple, Tuple[float, List[StockResult]]] = {}
+_CACHE_TTL = 900  # seconds
+
+
+def _cache_key(sector_id: int, tf: str, strategy_key: str) -> Tuple:
+    return (sector_id, tf, strategy_key)
+
+
+def invalidate_scorer_cache():
+    """Call after data refresh to clear cached scores."""
+    _sector_cache.clear()
+
+
 class Scorer:
-    """Pulls data from the DB and scores every ticker in a sector."""
+    """Pulls data from the DB and scores every ticker in a sector.
+
+    Uses batch queries (one per data type per sector) instead of N+1,
+    and caches results for ``_CACHE_TTL`` seconds.
+    """
 
     def __init__(self, session: Session, timeframe: str = "D"):
         self.session = session
         self.timeframe = timeframe
 
-    # ── data loaders ─────────────────────────────────────────────────────
+    # ── batch data loaders ────────────────────────────────────────────
 
-    def _closes(self, symbol: str) -> list[float]:
+    def _batch_closes(self, symbols: Sequence[str]) -> Dict[str, List[float]]:
         rows = (
-            self.session.query(PriceHistory.close)
-            .filter_by(symbol=symbol, timeframe=self.timeframe)
-            .order_by(PriceHistory.date)
+            self.session.query(PriceHistory.symbol, PriceHistory.close, PriceHistory.date)
+            .filter(PriceHistory.symbol.in_(symbols), PriceHistory.timeframe == self.timeframe)
+            .order_by(PriceHistory.symbol, PriceHistory.date)
             .all()
         )
-        return [r[0] for r in rows if r[0] is not None]
+        out: Dict[str, List[float]] = defaultdict(list)
+        for sym, close, _ in rows:
+            if close is not None:
+                out[sym].append(close)
+        return dict(out)
 
-    def _latest_bb_pct(self, symbol: str) -> float | None:
-        row = (
-            self.session.query(TechnicalIndicator.bb_pct)
-            .filter_by(symbol=symbol, timeframe=self.timeframe)
-            .order_by(TechnicalIndicator.date.desc())
-            .first()
+    def _batch_latest_bb_pct(self, symbols: Sequence[str]) -> Dict[str, Optional[float]]:
+        subq = (
+            self.session.query(
+                TechnicalIndicator.symbol,
+                func.max(TechnicalIndicator.date).label("max_date"),
+            )
+            .filter(TechnicalIndicator.symbol.in_(symbols), TechnicalIndicator.timeframe == self.timeframe)
+            .group_by(TechnicalIndicator.symbol)
+            .subquery()
         )
-        return row[0] if row else None
+        rows = (
+            self.session.query(TechnicalIndicator.symbol, TechnicalIndicator.bb_pct)
+            .join(subq, (TechnicalIndicator.symbol == subq.c.symbol) & (TechnicalIndicator.date == subq.c.max_date))
+            .filter(TechnicalIndicator.timeframe == self.timeframe)
+            .all()
+        )
+        return {sym: bb for sym, bb in rows}
 
-    def _commodity_closes(self, sector_id: int) -> tuple[list[float], float | None]:
-        """Return (all_closes, latest_close) averaged across sector commodities."""
+    def _batch_fundamentals(self, symbols: Sequence[str]) -> Dict[str, Fundamental]:
+        subq = (
+            self.session.query(
+                Fundamental.symbol,
+                func.max(Fundamental.report_date).label("max_date"),
+            )
+            .filter(Fundamental.symbol.in_(symbols))
+            .group_by(Fundamental.symbol)
+            .subquery()
+        )
+        rows = (
+            self.session.query(Fundamental)
+            .join(subq, (Fundamental.symbol == subq.c.symbol) & (Fundamental.report_date == subq.c.max_date))
+            .all()
+        )
+        return {f.symbol: f for f in rows}
+
+    def _batch_historical_pes(self, symbols: Sequence[str]) -> Dict[str, List[float]]:
+        rows = (
+            self.session.query(Fundamental.symbol, Fundamental.pe_ratio)
+            .filter(
+                Fundamental.symbol.in_(symbols),
+                Fundamental.pe_ratio.isnot(None),
+                Fundamental.pe_ratio > 0,
+            )
+            .all()
+        )
+        out: Dict[str, List[float]] = defaultdict(list)
+        for sym, pe in rows:
+            out[sym].append(pe)
+        return dict(out)
+
+    def _commodity_closes(self, sector_id: int) -> Tuple[List[float], Optional[float]]:
         commodities = (
             self.session.query(SectorCommodity.commodity_symbol)
             .filter_by(sector_id=sector_id)
@@ -280,16 +343,21 @@ class Scorer:
         if not commodities:
             return [], None
 
-        all_closes: list[float] = []
-        latest_values: list[float] = []
-        for (sym,) in commodities:
-            rows = (
-                self.session.query(PriceHistory.close)
-                .filter_by(symbol=sym, timeframe=self.timeframe)
-                .order_by(PriceHistory.date)
-                .all()
-            )
-            closes = [r[0] for r in rows if r[0] is not None]
+        syms = [s for (s,) in commodities]
+        rows = (
+            self.session.query(PriceHistory.symbol, PriceHistory.close)
+            .filter(PriceHistory.symbol.in_(syms), PriceHistory.timeframe == self.timeframe)
+            .order_by(PriceHistory.symbol, PriceHistory.date)
+            .all()
+        )
+        per_sym: Dict[str, List[float]] = defaultdict(list)
+        for sym, close in rows:
+            if close is not None:
+                per_sym[sym].append(close)
+
+        all_closes: List[float] = []
+        latest_values: List[float] = []
+        for closes in per_sym.values():
             if closes:
                 all_closes.extend(closes)
                 latest_values.append(closes[-1])
@@ -297,92 +365,21 @@ class Scorer:
         latest = sum(latest_values) / len(latest_values) if latest_values else None
         return all_closes, latest
 
-    def _latest_fundamentals(self, symbol: str) -> Fundamental | None:
-        return (
-            self.session.query(Fundamental)
-            .filter_by(symbol=symbol)
-            .order_by(Fundamental.report_date.desc())
-            .first()
-        )
-
-    def _historical_pes(self, symbol: str) -> list[float]:
-        rows = (
-            self.session.query(Fundamental.pe_ratio)
-            .filter_by(symbol=symbol)
-            .filter(Fundamental.pe_ratio.isnot(None))
-            .filter(Fundamental.pe_ratio > 0)
-            .all()
-        )
-        return [r[0] for r in rows]
-
     # ── scoring ──────────────────────────────────────────────────────────
-
-    def score_stock(
-        self,
-        ticker: Ticker,
-        strategy: ScoringStrategy,
-        commodity_data: tuple[list[float], float | None] | None = None,
-    ) -> StockResult:
-        """Score a single ticker under the given strategy."""
-        active = strategy.active_components()
-
-        # Always load closes — needed for display (current_price) even if
-        # "price" component has zero weight.
-        closes = self._closes(ticker.symbol)
-        current_price = closes[-1] if closes else None
-
-        price_sc = compute_price_score(closes, current_price) if ("price" in active) else 50.0
-
-        bb_pct = self._latest_bb_pct(ticker.symbol) if ("bb" in active) else None
-        bb_sc = compute_bb_score(bb_pct)
-
-        if "commodity" in active and commodity_data is not None:
-            c_closes, c_latest = commodity_data
-            commodity_sc = compute_commodity_score(c_closes, c_latest)
-        else:
-            commodity_sc = 50.0
-
-        fund = self._latest_fundamentals(ticker.symbol)
-
-        if "pe" in active and fund:
-            hist_pes = self._historical_pes(ticker.symbol)
-            pe_sc = compute_pe_score(fund.pe_ratio, hist_pes)
-        else:
-            pe_sc = 50.0
-
-        if "balance" in active and fund:
-            balance_sc = compute_balance_score(
-                fund.debt_to_equity,
-                fund.current_ratio,
-                fund.interest_coverage,
-                fund.roe,
-            )
-        else:
-            balance_sc = 50.0
-
-        sub = {"price": price_sc, "bb": bb_sc, "commodity": commodity_sc, "pe": pe_sc, "balance": balance_sc}
-        composite = compute_composite(sub, strategy)
-
-        return StockResult(
-            symbol=ticker.symbol,
-            name=ticker.name,
-            exchange=ticker.exchange,
-            current_price=current_price,
-            price_score=price_sc,
-            bb_score=bb_sc,
-            commodity_score=commodity_sc,
-            pe_score=pe_sc,
-            balance_score=balance_sc,
-            composite_score=composite,
-            strategy_key=strategy.key,
-        )
 
     def screen_sector(
         self,
         sector_id: int,
         strategy: ScoringStrategy,
-    ) -> list[StockResult]:
+    ) -> List[StockResult]:
         """Score all tickers in a sector, return sorted by composite desc."""
+        key = _cache_key(sector_id, self.timeframe, strategy.key)
+        cached = _sector_cache.get(key)
+        if cached:
+            ts, results = cached
+            if time.monotonic() - ts < _CACHE_TTL:
+                return [r for r in results]  # shallow copy
+
         sector = self.session.query(Sector).get(sector_id)
         sector_name = sector.name if sector else ""
 
@@ -394,14 +391,62 @@ class Scorer:
         if not tickers:
             return []
 
-        commodity_data = self._commodity_closes(sector_id)
+        symbols = [t.symbol for t in tickers]
+        active = strategy.active_components()
 
-        results = []
+        closes_map = self._batch_closes(symbols)
+        bb_map = self._batch_latest_bb_pct(symbols) if "bb" in active else {}
+        fund_map = self._batch_fundamentals(symbols) if ("pe" in active or "balance" in active) else {}
+        pes_map = self._batch_historical_pes(symbols) if "pe" in active else {}
+        commodity_data = self._commodity_closes(sector_id) if "commodity" in active else ([], None)
+
+        results: List[StockResult] = []
         for t in tickers:
-            r = self.score_stock(t, strategy, commodity_data)
-            r.sector_name = sector_name
-            results.append(r)
+            closes = closes_map.get(t.symbol, [])
+            current_price = closes[-1] if closes else None
+
+            price_sc = compute_price_score(closes, current_price) if "price" in active else 50.0
+
+            bb_pct = bb_map.get(t.symbol) if "bb" in active else None
+            bb_sc = compute_bb_score(bb_pct)
+
+            if "commodity" in active and commodity_data[0]:
+                c_closes, c_latest = commodity_data
+                commodity_sc = compute_commodity_score(c_closes, c_latest)
+            else:
+                commodity_sc = 50.0
+
+            fund = fund_map.get(t.symbol)
+            pe_sc = compute_pe_score(fund.pe_ratio, pes_map.get(t.symbol, [])) if ("pe" in active and fund) else 50.0
+
+            if "balance" in active and fund:
+                balance_sc = compute_balance_score(
+                    fund.debt_to_equity, fund.current_ratio,
+                    fund.interest_coverage, fund.roe,
+                )
+            else:
+                balance_sc = 50.0
+
+            sub = {"price": price_sc, "bb": bb_sc, "commodity": commodity_sc, "pe": pe_sc, "balance": balance_sc}
+            composite = compute_composite(sub, strategy)
+
+            results.append(StockResult(
+                symbol=t.symbol,
+                name=t.name,
+                exchange=t.exchange,
+                current_price=current_price,
+                price_score=price_sc,
+                bb_score=bb_sc,
+                commodity_score=commodity_sc,
+                pe_score=pe_sc,
+                balance_score=balance_sc,
+                composite_score=composite,
+                strategy_key=strategy.key,
+                sector_name=sector_name,
+            ))
+
         results.sort(key=lambda r: r.composite_score, reverse=True)
+        _sector_cache[key] = (time.monotonic(), results)
 
         # Persist to screening_scores
         now = datetime.now(timezone.utc).isoformat()

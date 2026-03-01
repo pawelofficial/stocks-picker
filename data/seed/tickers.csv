@@ -44,5 +44,73 @@ FMC,FMC Corporation,NYSE,Agriculture & Fertilizers
 CTVA,Corteva,NYSE,Agriculture & Fertilizers
 ALB,Albemarle,NYSE,Lithium & Battery Metals
 SQM,Sociedad Quimica y Minera,NYSE,Lithium & Battery Metals
-LTHM,Livent,NYSE,Lithium & Battery Metals
+LAC,Lithium Americas,NYSE,Lithium & Battery Metals
 MP,MP Materials,NYSE,Lithium & Battery Metals
+CCJ,Cameco,NYSE,Uranium & Nuclear
+UEC,Uranium Energy,NYSE,Uranium & Nuclear
+UUUU,Energy Fuels,NYSE,Uranium & Nuclear
+DNN,Denison Mines,NYSE,Uranium & Nuclear
+NXE,NexGen Energy,NYSE,Uranium & Nuclear
+LEU,Centrus Energy,NYSE,Uranium & Nuclear
+SMR,NuScale Power,NYSE,Uranium & Nuclear
+URA,Global X Uranium ETF,NYSE,Uranium & Nuclear
+BTU,Peabody Energy,NYSE,Coal
+ARLP,Alliance Resource Partners,NASDAQ,Coal
+HCC,Warrior Met Coal,NYSE,Coal
+AMR,Alpha Metallurgical,NYSE,Coal
+CNX,CNX Resources,NYSE,Coal
+METC,Ramaco Resources,NASDAQ,Coal
+HNRG,Hallador Energy,NASDAQ,Coal
+FSLR,First Solar,NASDAQ,Solar & Renewables
+ENPH,Enphase Energy,NASDAQ,Solar & Renewables
+RUN,Sunrun,NASDAQ,Solar & Renewables
+SEDG,SolarEdge Technologies,NASDAQ,Solar & Renewables
+ARRY,Array Technologies,NASDAQ,Solar & Renewables
+TAN,Invesco Solar ETF,NYSE,Solar & Renewables
+CSIQ,Canadian Solar,NASDAQ,Solar & Renewables
+SPWR,SunPower,NASDAQ,Solar & Renewables
+LMT,Lockheed Martin,NYSE,Defense & Aerospace
+NOC,Northrop Grumman,NYSE,Defense & Aerospace
+RTX,RTX Corporation,NYSE,Defense & Aerospace
+GD,General Dynamics,NYSE,Defense & Aerospace
+BA,Boeing,NYSE,Defense & Aerospace
+LHX,L3Harris Technologies,NYSE,Defense & Aerospace
+HII,Huntington Ingalls,NYSE,Defense & Aerospace
+AAPL,Apple,NASDAQ,Tech & Semiconductors
+MSFT,Microsoft,NASDAQ,Tech & Semiconductors
+NVDA,NVIDIA,NASDAQ,Tech & Semiconductors
+GOOGL,Alphabet,NASDAQ,Tech & Semiconductors
+AMZN,Amazon,NASDAQ,Tech & Semiconductors
+META,Meta Platforms,NASDAQ,Tech & Semiconductors
+TSM,Taiwan Semiconductor,NYSE,Tech & Semiconductors
+AVGO,Broadcom,NASDAQ,Tech & Semiconductors
+AMD,Advanced Micro Devices,NASDAQ,Tech & Semiconductors
+INTC,Intel,NASDAQ,Tech & Semiconductors
+QCOM,Qualcomm,NASDAQ,Tech & Semiconductors
+MU,Micron Technology,NASDAQ,Tech & Semiconductors
+MRVL,Marvell Technology,NASDAQ,Tech & Semiconductors
+ANET,Arista Networks,NYSE,Tech & Semiconductors
+JPM,JPMorgan Chase,NYSE,Banks & Financials
+GS,Goldman Sachs,NYSE,Banks & Financials
+MS,Morgan Stanley,NYSE,Banks & Financials
+BAC,Bank of America,NYSE,Banks & Financials
+WFC,Wells Fargo,NYSE,Banks & Financials
+C,Citigroup,NYSE,Banks & Financials
+BX,Blackstone,NYSE,Banks & Financials
+KKR,KKR & Co,NYSE,Banks & Financials
+APO,Apollo Global Management,NYSE,Banks & Financials
+VALE,Vale,NYSE,Base Metals
+AA,Alcoa,NYSE,Base Metals
+CENX,Century Aluminum,NASDAQ,Base Metals
+HBM,Hudbay Minerals,NYSE,Base Metals
+AWK,American Water Works,NYSE,Water & Utilities
+WTRG,Essential Utilities,NYSE,Water & Utilities
+XYL,Xylem,NYSE,Water & Utilities
+PNR,Pentair,NYSE,Water & Utilities
+RGLD,Royal Gold,NASDAQ,Gold Silver
+OR,Osisko Gold Royalties,NYSE,Gold Silver
+SSRM,SSR Mining,NASDAQ,Gold Silver
+HL,Hecla Mining,NYSE,Gold Silver
+PAAS,Pan American Silver,NASDAQ,Gold Silver
+EGO,Eldorado Gold,NYSE,Gold Silver
+SVM,Silvercorp Metals,NYSE,Gold Silver

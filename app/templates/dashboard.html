@@ -7,6 +7,22 @@
     {% for s in sectors %}
     <div class="card">
         <h3>{{ s.name }}</h3>
+        {% if s.avg_composite is not none %}
+        <div class="card-scores">
+            <div class="card-score-item">
+                <span class="score {{ score_class(s.avg_composite) }}" style="font-size:1.3rem; font-weight:700;">
+                    {{ "%.1f"|format(s.avg_composite) }}
+                </span>
+                <span class="meta">composite</span>
+            </div>
+            <div class="card-score-item">
+                <span class="score {{ score_class(s.avg_bb) }}" style="font-size:1.3rem; font-weight:700;">
+                    {{ "%.0f"|format(s.avg_bb) }}
+                </span>
+                <span class="meta">BB</span>
+            </div>
+        </div>
+        {% endif %}
         <p class="meta">
             {{ s.ticker_count }} ticker{{ "s" if s.ticker_count != 1 else "" }}
             &middot;

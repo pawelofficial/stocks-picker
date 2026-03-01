@@ -9,6 +9,7 @@ from app.database import get_db, SessionLocal
 from app.models import Sector
 from app.services.data_fetcher import refresh_sector as _refresh_sector, refresh_symbol
 from app.services.indicators import compute_all_for_sector, compute_all_for_symbol
+from app.services.scorer import invalidate_scorer_cache
 
 router = APIRouter()
 log = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ def _bg_refresh_sector(sector_id: int, job_id: str):
         log.info("BG refresh sector %d: %s rows, %s errors", sector_id, stats.price_rows_written, len(stats.errors))
         n = compute_all_for_sector(session, sector_id)
         log.info("BG indicators sector %d: %d rows", sector_id, n)
+        invalidate_scorer_cache()
         _jobs[job_id] = "done"
     except Exception:
         log.exception("BG refresh sector %d failed", sector_id)
@@ -38,6 +40,7 @@ def _bg_refresh_symbol(symbol: str, full: bool, job_id: str):
         stats = refresh_symbol(session, symbol, full=full)
         log.info("BG refresh %s (full=%s): %s rows", symbol, full, stats.price_rows_written)
         compute_all_for_symbol(session, symbol, force=full)
+        invalidate_scorer_cache()
         _jobs[job_id] = "done"
     except Exception:
         log.exception("BG refresh %s failed", symbol)
