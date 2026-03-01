@@ -30,7 +30,7 @@
         </p>
         <div class="actions">
             <a href="/sectors/{{ s.id }}/screen" class="btn btn-primary">Screen</a>
-            <button class="btn btn-secondary" onclick="refreshSector({{ s.id }}, this)">Refresh Data</button>
+            <button class="btn btn-secondary" onclick="refreshSector({{ s.id }}, this)">Full Refresh</button>
         </div>
     </div>
     {% endfor %}
@@ -42,11 +42,31 @@
 function refreshSector(sectorId, btn) {
     btn.innerHTML = '<span class="spinner"></span>Refreshing…';
     btn.disabled = true;
-    fetch('/api/refresh/sector/' + sectorId, {method: 'POST'})
-        .then(r => r.json())
-        .then(d => { btn.textContent = 'Started: ' + d.sector; })
-        .catch(() => { btn.textContent = 'Error'; })
-        .finally(() => { setTimeout(() => { btn.textContent = 'Refresh Data'; btn.disabled = false; }, 5000); });
+    fetch('/api/refresh/sector/' + sectorId + '?full=true', {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            btn.textContent = 'Running: ' + d.sector + '…';
+            pollSectorJob(d.job_id, btn);
+        })
+        .catch(function() { btn.textContent = 'Error'; btn.disabled = false; });
+}
+
+function pollSectorJob(jobId, btn) {
+    var interval = setInterval(function() {
+        fetch('/api/refresh/status/' + jobId)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'done') {
+                    clearInterval(interval);
+                    location.reload();
+                } else if (d.status === 'error') {
+                    clearInterval(interval);
+                    btn.textContent = 'Failed';
+                    btn.disabled = false;
+                }
+            })
+            .catch(function() {});
+    }, 3000);
 }
 </script>
 {% endblock %}

@@ -1,5 +1,5 @@
 symbol,name,exchange,sector_name
-USO, United States Oil Fund,NYSE,Oil & Gas
+USO,United States Oil Fund,NYSE,Oil & Gas
 XOM,ExxonMobil,NYSE,Oil & Gas
 CVX,Chevron,NYSE,Oil & Gas
 COP,ConocoPhillips,NYSE,Oil & Gas
@@ -15,37 +15,71 @@ HES,Hess Corporation,NYSE,Oil & Gas
 FANG,Diamondback Energy,NASDAQ,Oil & Gas
 PXD,Pioneer Natural Resources,NYSE,Oil & Gas
 APA,APA Corporation,NASDAQ,Oil & Gas
+BKR,Baker Hughes,NASDAQ,Oil & Gas
+NOV,NOV Inc,NYSE,Oil & Gas
+MRO,Marathon Oil,NYSE,Oil & Gas
+WMB,Williams Companies,NYSE,Oil & Gas
+KMI,Kinder Morgan,NYSE,Oil & Gas
+ET,Energy Transfer,NYSE,Oil & Gas
+EPD,Enterprise Products Partners,NYSE,Oil & Gas
 FCX,Freeport-McMoRan,NYSE,Copper & Mining
 SCCO,Southern Copper,NYSE,Copper & Mining
 TECK,Teck Resources,NYSE,Copper & Mining
 RIO,Rio Tinto,NYSE,Copper & Mining
 BHP,BHP Group,NYSE,Copper & Mining
-NEM,Newmont,NYSE,Gold Silver
-IAG,Iamgold,NYSE,Gold Silver
-AG,First Majestic, NYSE, Gold Silver
-GOLD,Barrick Gold,NYSE,Gold Silver
-AEM,Agnico Eagle Mines,NYSE,Gold Silver
-WPM,Wheaton Precious Metals,NYSE,Gold Silver
-KGC,Kinross Gold,NYSE,Gold Silver
-FNV,Franco-Nevada,NYSE,Gold Silver
+VALE,Vale,NYSE,Base Metals
+AA,Alcoa,NYSE,Base Metals
+CENX,Century Aluminum,NASDAQ,Base Metals
+HBM,Hudbay Minerals,NYSE,Base Metals
+ARNC,Arconic,NASDAQ,Base Metals
+ATI,ATI Inc,NYSE,Base Metals
+NEM,Newmont,NYSE,Gold & Silver
+IAG,Iamgold,NYSE,Gold & Silver
+AG,First Majestic,NYSE,Gold & Silver
+GOLD,Barrick Gold,NYSE,Gold & Silver
+AEM,Agnico Eagle Mines,NYSE,Gold & Silver
+WPM,Wheaton Precious Metals,NYSE,Gold & Silver
+KGC,Kinross Gold,NYSE,Gold & Silver
+FNV,Franco-Nevada,NYSE,Gold & Silver
+RGLD,Royal Gold,NASDAQ,Gold & Silver
+OR,Osisko Gold Royalties,NYSE,Gold & Silver
+SSRM,SSR Mining,NASDAQ,Gold & Silver
+HL,Hecla Mining,NYSE,Gold & Silver
+PAAS,Pan American Silver,NASDAQ,Gold & Silver
+EGO,Eldorado Gold,NYSE,Gold & Silver
+SVM,Silvercorp Metals,NYSE,Gold & Silver
+CDE,Coeur Mining,NYSE,Gold & Silver
+MAG,MAG Silver,NYSE,Gold & Silver
+GFI,Gold Fields,NYSE,Gold & Silver
+HMY,Harmony Gold,NYSE,Gold & Silver
 NUE,Nucor,NYSE,Steel
 STLD,Steel Dynamics,NASDAQ,Steel
 X,United States Steel,NYSE,Steel
 CLF,Cleveland-Cliffs,NYSE,Steel
+RS,Reliance Steel & Aluminum,NYSE,Steel
+TMST,TimkenSteel,NASDAQ,Steel
+ZEUS,Olympic Steel,NASDAQ,Steel
 LNG,Cheniere Energy,NYSE,Natural Gas
 AR,Antero Resources,NYSE,Natural Gas
 EQT,EQT Corporation,NYSE,Natural Gas
 RRC,Range Resources,NYSE,Natural Gas
 SWN,Southwestern Energy,NYSE,Natural Gas
+CHK,Chesapeake Energy,NASDAQ,Natural Gas
+CNX,CNX Resources,NYSE,Natural Gas
 MOS,The Mosaic Company,NYSE,Agriculture & Fertilizers
 NTR,Nutrien,NYSE,Agriculture & Fertilizers
 CF,CF Industries,NYSE,Agriculture & Fertilizers
 FMC,FMC Corporation,NYSE,Agriculture & Fertilizers
 CTVA,Corteva,NYSE,Agriculture & Fertilizers
+ICL,ICL Group,NYSE,Agriculture & Fertilizers
+IPI,Intrepid Potash,NYSE,Agriculture & Fertilizers
 ALB,Albemarle,NYSE,Lithium & Battery Metals
 SQM,Sociedad Quimica y Minera,NYSE,Lithium & Battery Metals
 LAC,Lithium Americas,NYSE,Lithium & Battery Metals
 MP,MP Materials,NYSE,Lithium & Battery Metals
+LTHM,Livent,NYSE,Lithium & Battery Metals
+PLL,Piedmont Lithium,NASDAQ,Lithium & Battery Metals
+ALTM,Arcadium Lithium,NYSE,Lithium & Battery Metals
 CCJ,Cameco,NYSE,Uranium & Nuclear
 UEC,Uranium Energy,NYSE,Uranium & Nuclear
 UUUU,Energy Fuels,NYSE,Uranium & Nuclear
@@ -54,13 +88,15 @@ NXE,NexGen Energy,NYSE,Uranium & Nuclear
 LEU,Centrus Energy,NYSE,Uranium & Nuclear
 SMR,NuScale Power,NYSE,Uranium & Nuclear
 URA,Global X Uranium ETF,NYSE,Uranium & Nuclear
+EU,enCore Energy,NYSE,Uranium & Nuclear
+URG,Ur-Energy,NYSE,Uranium & Nuclear
 BTU,Peabody Energy,NYSE,Coal
 ARLP,Alliance Resource Partners,NASDAQ,Coal
 HCC,Warrior Met Coal,NYSE,Coal
 AMR,Alpha Metallurgical,NYSE,Coal
-CNX,CNX Resources,NYSE,Coal
 METC,Ramaco Resources,NASDAQ,Coal
 HNRG,Hallador Energy,NASDAQ,Coal
+ARCH,Arch Resources,NYSE,Coal
 FSLR,First Solar,NASDAQ,Solar & Renewables
 ENPH,Enphase Energy,NASDAQ,Solar & Renewables
 RUN,Sunrun,NASDAQ,Solar & Renewables
@@ -68,7 +104,15 @@ SEDG,SolarEdge Technologies,NASDAQ,Solar & Renewables
 ARRY,Array Technologies,NASDAQ,Solar & Renewables
 TAN,Invesco Solar ETF,NYSE,Solar & Renewables
 CSIQ,Canadian Solar,NASDAQ,Solar & Renewables
-SPWR,SunPower,NASDAQ,Solar & Renewables
+NEE,NextEra Energy,NYSE,Solar & Renewables
+AES,AES Corporation,NYSE,Solar & Renewables
+CWEN,Clearway Energy,NYSE,Solar & Renewables
+NOVA,Sunnova Energy,NYSE,Solar & Renewables
+BE,Bloom Energy,NYSE,Solar & Renewables
+PLUG,Plug Power,NASDAQ,Hydrogen & Fuel Cells
+FCEL,FuelCell Energy,NASDAQ,Hydrogen & Fuel Cells
+BLDP,Ballard Power Systems,NASDAQ,Hydrogen & Fuel Cells
+HYLN,Hyliion Holdings,NYSE,Hydrogen & Fuel Cells
 LMT,Lockheed Martin,NYSE,Defense & Aerospace
 NOC,Northrop Grumman,NYSE,Defense & Aerospace
 RTX,RTX Corporation,NYSE,Defense & Aerospace
@@ -76,6 +120,12 @@ GD,General Dynamics,NYSE,Defense & Aerospace
 BA,Boeing,NYSE,Defense & Aerospace
 LHX,L3Harris Technologies,NYSE,Defense & Aerospace
 HII,Huntington Ingalls,NYSE,Defense & Aerospace
+LDOS,Leidos Holdings,NYSE,Defense & Aerospace
+SAIC,Science Applications International,NASDAQ,Defense & Aerospace
+TDG,TransDigm Group,NYSE,Defense & Aerospace
+KTOS,Kratos Defense & Security,NASDAQ,Defense & Aerospace
+AVAV,AeroVironment,NASDAQ,Defense & Aerospace
+RCAT,Red Cat Holdings,NASDAQ,Defense & Aerospace
 AAPL,Apple,NASDAQ,Tech & Semiconductors
 MSFT,Microsoft,NASDAQ,Tech & Semiconductors
 NVDA,NVIDIA,NASDAQ,Tech & Semiconductors
@@ -90,6 +140,10 @@ QCOM,Qualcomm,NASDAQ,Tech & Semiconductors
 MU,Micron Technology,NASDAQ,Tech & Semiconductors
 MRVL,Marvell Technology,NASDAQ,Tech & Semiconductors
 ANET,Arista Networks,NYSE,Tech & Semiconductors
+ARM,Arm Holdings,NASDAQ,Tech & Semiconductors
+SMCI,Super Micro Computer,NASDAQ,Tech & Semiconductors
+ON,ON Semiconductor,NASDAQ,Tech & Semiconductors
+WOLF,Wolfspeed,NYSE,Tech & Semiconductors
 JPM,JPMorgan Chase,NYSE,Banks & Financials
 GS,Goldman Sachs,NYSE,Banks & Financials
 MS,Morgan Stanley,NYSE,Banks & Financials
@@ -99,18 +153,94 @@ C,Citigroup,NYSE,Banks & Financials
 BX,Blackstone,NYSE,Banks & Financials
 KKR,KKR & Co,NYSE,Banks & Financials
 APO,Apollo Global Management,NYSE,Banks & Financials
-VALE,Vale,NYSE,Base Metals
-AA,Alcoa,NYSE,Base Metals
-CENX,Century Aluminum,NASDAQ,Base Metals
-HBM,Hudbay Minerals,NYSE,Base Metals
+ARES,Ares Management,NYSE,Banks & Financials
+BAM,Brookfield Asset Management,NYSE,Banks & Financials
+USB,US Bancorp,NYSE,Banks & Financials
 AWK,American Water Works,NYSE,Water & Utilities
 WTRG,Essential Utilities,NYSE,Water & Utilities
 XYL,Xylem,NYSE,Water & Utilities
 PNR,Pentair,NYSE,Water & Utilities
-RGLD,Royal Gold,NASDAQ,Gold Silver
-OR,Osisko Gold Royalties,NYSE,Gold Silver
-SSRM,SSR Mining,NASDAQ,Gold Silver
-HL,Hecla Mining,NYSE,Gold Silver
-PAAS,Pan American Silver,NASDAQ,Gold Silver
-EGO,Eldorado Gold,NYSE,Gold Silver
-SVM,Silvercorp Metals,NYSE,Gold Silver
+MSEX,Middlesex Water,NASDAQ,Water & Utilities
+YORW,York Water,NASDAQ,Water & Utilities
+ARTNA,Artesian Resources,NASDAQ,Water & Utilities
+TSLA,Tesla,NASDAQ,Electric Vehicles
+RIVN,Rivian Automotive,NASDAQ,Electric Vehicles
+LCID,Lucid Group,NASDAQ,Electric Vehicles
+NIO,NIO Inc,NYSE,Electric Vehicles
+LI,Li Auto,NASDAQ,Electric Vehicles
+XPEV,XPeng,NYSE,Electric Vehicles
+FSR,Fisker,NYSE,Electric Vehicles
+CHPT,ChargePoint Holdings,NYSE,Electric Vehicles
+BLNK,Blink Charging,NASDAQ,Electric Vehicles
+EVGO,EVgo,NASDAQ,Electric Vehicles
+COIN,Coinbase Global,NASDAQ,Crypto & Blockchain
+MSTR,MicroStrategy,NASDAQ,Crypto & Blockchain
+MARA,Marathon Digital Holdings,NASDAQ,Crypto & Blockchain
+RIOT,Riot Platforms,NASDAQ,Crypto & Blockchain
+CLSK,CleanSpark,NASDAQ,Crypto & Blockchain
+BTBT,Bit Digital,NASDAQ,Crypto & Blockchain
+HUT,Hut 8 Mining,NASDAQ,Crypto & Blockchain
+IREN,Iris Energy,NASDAQ,Crypto & Blockchain
+IBIT,iShares Bitcoin Trust ETF,NASDAQ,Crypto & Blockchain
+FBTC,Fidelity Wise Origin Bitcoin Fund,BATS,Crypto & Blockchain
+PFE,Pfizer,NYSE,Pharmaceuticals & Biotech
+JNJ,Johnson & Johnson,NYSE,Pharmaceuticals & Biotech
+ABBV,AbbVie,NYSE,Pharmaceuticals & Biotech
+MRK,Merck,NYSE,Pharmaceuticals & Biotech
+LLY,Eli Lilly,NYSE,Pharmaceuticals & Biotech
+BMY,Bristol-Myers Squibb,NYSE,Pharmaceuticals & Biotech
+AMGN,Amgen,NASDAQ,Pharmaceuticals & Biotech
+GILD,Gilead Sciences,NASDAQ,Pharmaceuticals & Biotech
+BIIB,Biogen,NASDAQ,Pharmaceuticals & Biotech
+MRNA,Moderna,NASDAQ,Pharmaceuticals & Biotech
+REGN,Regeneron Pharmaceuticals,NASDAQ,Pharmaceuticals & Biotech
+VRTX,Vertex Pharmaceuticals,NASDAQ,Pharmaceuticals & Biotech
+CAT,Caterpillar,NYSE,Industrials & Machinery
+DE,Deere & Company,NYSE,Industrials & Machinery
+EMR,Emerson Electric,NYSE,Industrials & Machinery
+HON,Honeywell,NASDAQ,Industrials & Machinery
+GE,GE Aerospace,NYSE,Industrials & Machinery
+ITW,Illinois Tool Works,NYSE,Industrials & Machinery
+PH,Parker Hannifin,NYSE,Industrials & Machinery
+ROK,Rockwell Automation,NYSE,Industrials & Machinery
+CMI,Cummins,NYSE,Industrials & Machinery
+PCAR,PACCAR,NASDAQ,Industrials & Machinery
+AMT,American Tower,NYSE,Real Estate & REITs
+PLD,Prologis,NYSE,Real Estate & REITs
+EQIX,Equinix,NASDAQ,Real Estate & REITs
+CCI,Crown Castle,NYSE,Real Estate & REITs
+DLR,Digital Realty Trust,NYSE,Real Estate & REITs
+SPG,Simon Property Group,NYSE,Real Estate & REITs
+O,Realty Income,NYSE,Real Estate & REITs
+WY,Weyerhaeuser,NYSE,Real Estate & REITs
+PCH,PotlatchDeltic,NASDAQ,Real Estate & REITs
+RYN,Rayonier,NYSE,Real Estate & REITs
+LIN,Linde,NASDAQ,Chemicals & Materials
+APD,Air Products and Chemicals,NASDAQ,Chemicals & Materials
+SHW,Sherwin-Williams,NYSE,Chemicals & Materials
+ECL,Ecolab,NYSE,Chemicals & Materials
+DD,DuPont de Nemours,NYSE,Chemicals & Materials
+DOW,Dow,NYSE,Chemicals & Materials
+LYB,LyondellBasell Industries,NYSE,Chemicals & Materials
+PPG,PPG Industries,NYSE,Chemicals & Materials
+CE,Celanese,NYSE,Chemicals & Materials
+AXTA,Axalta Coating Systems,NYSE,Chemicals & Materials
+UPS,United Parcel Service,NYSE,Logistics & Transportation
+FDX,FedEx,NYSE,Logistics & Transportation
+XPO,XPO,NYSE,Logistics & Transportation
+JBHT,JB Hunt Transport Services,NASDAQ,Logistics & Transportation
+ODFL,Old Dominion Freight Line,NASDAQ,Logistics & Transportation
+SAIA,Saia,NASDAQ,Logistics & Transportation
+DAL,Delta Air Lines,NYSE,Airlines
+UAL,United Airlines Holdings,NASDAQ,Airlines
+AAL,American Airlines Group,NASDAQ,Airlines
+LUV,Southwest Airlines,NYSE,Airlines
+ALK,Alaska Air Group,NYSE,Airlines
+JBLU,JetBlue Airways,NASDAQ,Airlines
+AI,C3.ai,NYSE,Artificial Intelligence
+BBAI,BigBear.ai,NYSE,Artificial Intelligence
+SOUN,SoundHound AI,NASDAQ,Artificial Intelligence
+IONQ,IonQ,NYSE,Quantum Computing
+RGTI,Rigetti Computing,NASDAQ,Quantum Computing
+QUBT,Quantum Computing Inc,NASDAQ,Quantum Computing
+ARQQ,Arqit Quantum,NASDAQ,Quantum Computing

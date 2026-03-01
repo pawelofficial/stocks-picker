@@ -17,13 +17,13 @@ log = logging.getLogger(__name__)
 _jobs: Dict[str, str] = {}
 
 
-def _bg_refresh_sector(sector_id: int, job_id: str):
+def _bg_refresh_sector(sector_id: int, full: bool, job_id: str):
     """Run in background thread — needs its own session."""
     session = SessionLocal()
     try:
-        stats = _refresh_sector(session, sector_id)
-        log.info("BG refresh sector %d: %s rows, %s errors", sector_id, stats.price_rows_written, len(stats.errors))
-        n = compute_all_for_sector(session, sector_id)
+        stats = _refresh_sector(session, sector_id, full=full)
+        log.info("BG refresh sector %d (full=%s): %s rows, %s errors", sector_id, full, stats.price_rows_written, len(stats.errors))
+        n = compute_all_for_sector(session, sector_id, force=full)
         log.info("BG indicators sector %d: %d rows", sector_id, n)
         invalidate_scorer_cache()
         _jobs[job_id] = "done"
@@ -61,6 +61,7 @@ def refresh_status(job_id: str):
 def trigger_sector_refresh(
     sector_id: int,
     background_tasks: BackgroundTasks,
+    full: bool = False,
     db: Session = Depends(get_db),
 ):
     sector = db.query(Sector).get(sector_id)
@@ -68,8 +69,8 @@ def trigger_sector_refresh(
         raise HTTPException(status_code=404, detail="Sector not found")
     job_id = uuid.uuid4().hex[:12]
     _jobs[job_id] = "running"
-    background_tasks.add_task(_bg_refresh_sector, sector_id, job_id)
-    return {"status": "started", "sector": sector.name, "job_id": job_id}
+    background_tasks.add_task(_bg_refresh_sector, sector_id, full, job_id)
+    return {"status": "started", "sector": sector.name, "full": full, "job_id": job_id}
 
 
 @router.post("/api/refresh/symbol/{symbol}")
