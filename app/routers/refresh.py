@@ -49,6 +49,39 @@ def _bg_refresh_symbol(symbol: str, full: bool, job_id: str):
         session.close()
 
 
+def _bg_refresh_all(full: bool, job_id: str):
+    """Refresh every sector sequentially in one background job."""
+    session = SessionLocal()
+    try:
+        sector_ids = [s.id for s in session.query(Sector).order_by(Sector.id).all()]
+        total_rows = 0
+        total_errors = 0
+        for sid in sector_ids:
+            try:
+                stats = _refresh_sector(session, sid, full=full)
+                total_rows += stats.price_rows_written
+                total_errors += len(stats.errors)
+                n = compute_all_for_sector(session, sid, force=full)
+                log.info(
+                    "BG refresh-all: sector %d done (%d price rows, %d indicator rows, %d errors)",
+                    sid, stats.price_rows_written, n, len(stats.errors),
+                )
+            except Exception:
+                log.exception("BG refresh-all: sector %d failed", sid)
+                total_errors += 1
+        invalidate_scorer_cache()
+        log.info(
+            "BG refresh-all complete (full=%s): %d sectors, %d rows, %d errors",
+            full, len(sector_ids), total_rows, total_errors,
+        )
+        _jobs[job_id] = "done"
+    except Exception:
+        log.exception("BG refresh-all failed")
+        _jobs[job_id] = "error"
+    finally:
+        session.close()
+
+
 @router.get("/api/refresh/status/{job_id}")
 def refresh_status(job_id: str):
     status = _jobs.get(job_id, "running")
@@ -83,3 +116,18 @@ def trigger_symbol_refresh(
     _jobs[job_id] = "running"
     background_tasks.add_task(_bg_refresh_symbol, symbol.upper(), full, job_id)
     return {"status": "started", "symbol": symbol.upper(), "full": full, "job_id": job_id}
+
+
+@router.post("/api/refresh/all")
+def trigger_refresh_all(
+    background_tasks: BackgroundTasks,
+    full: bool = False,
+    db: Session = Depends(get_db),
+):
+    sector_count = db.query(Sector).count()
+    if sector_count == 0:
+        raise HTTPException(status_code=404, detail="No sectors found. Seed the database first.")
+    job_id = uuid.uuid4().hex[:12]
+    _jobs[job_id] = "running"
+    background_tasks.add_task(_bg_refresh_all, full, job_id)
+    return {"status": "started", "scope": "all", "sectors": sector_count, "full": full, "job_id": job_id}

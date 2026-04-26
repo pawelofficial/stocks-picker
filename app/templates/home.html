@@ -4,6 +4,14 @@
 {% block content %}
 <h1>Top Picks <span style="font-size:.85rem; color:#8b949e; font-weight:normal;">{{ results|length }} of {{ total }} across all sectors &amp; timeframes</span></h1>
 
+<div class="filter-bar" style="display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;">
+    <div class="strategy-bar">
+        <button class="btn btn-primary btn-sm" id="btn-refresh-all" onclick="refreshAll(this, false)">Refresh All</button>
+        <button class="btn btn-secondary btn-sm" id="btn-full-refresh-all" onclick="refreshAll(this, true)" title="Full re-download of price history for every sector">Full Refresh All</button>
+        <span id="refresh-all-status" style="color:#8b949e; font-size:.85rem; margin-left:.5rem;"></span>
+    </div>
+</div>
+
 <div class="filter-bar">
     <div class="strategy-bar">
         <label>Strategy:</label>
@@ -70,6 +78,59 @@
 
 {% block scripts %}
 <script>
+function refreshAll(btn, full) {
+    var statusEl = document.getElementById('refresh-all-status');
+    var btnNormal = document.getElementById('btn-refresh-all');
+    var btnFull = document.getElementById('btn-full-refresh-all');
+    var originalLabel = btn.innerHTML;
+    btnNormal.disabled = true;
+    btnFull.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Starting…';
+    statusEl.textContent = '';
+
+    fetch('/api/refresh/all' + (full ? '?full=true' : ''), {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.status !== 'started') {
+                statusEl.textContent = 'Failed to start: ' + (d.detail || JSON.stringify(d));
+                btnNormal.disabled = false;
+                btnFull.disabled = false;
+                btn.innerHTML = originalLabel;
+                return;
+            }
+            btn.innerHTML = '<span class="spinner"></span>Refreshing ' + d.sectors + ' sectors…';
+            statusEl.textContent = 'Job ' + d.job_id + ' running in background. This may take a while.';
+            pollAllJob(d.job_id, btn, originalLabel, statusEl);
+        })
+        .catch(function() {
+            statusEl.textContent = 'Failed to start.';
+            btnNormal.disabled = false;
+            btnFull.disabled = false;
+            btn.innerHTML = originalLabel;
+        });
+}
+
+function pollAllJob(jobId, btn, originalLabel, statusEl) {
+    var interval = setInterval(function() {
+        fetch('/api/refresh/status/' + jobId)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.status === 'done') {
+                    clearInterval(interval);
+                    statusEl.textContent = 'Done. Reloading…';
+                    setTimeout(function() { location.reload(); }, 800);
+                } else if (d.status === 'error') {
+                    clearInterval(interval);
+                    statusEl.textContent = 'Failed. Check server logs.';
+                    document.getElementById('btn-refresh-all').disabled = false;
+                    document.getElementById('btn-full-refresh-all').disabled = false;
+                    btn.innerHTML = originalLabel;
+                }
+            })
+            .catch(function() {});
+    }, 3000);
+}
+
 (function() {
     var table = document.getElementById('top-picks-table');
     if (!table) return;
